@@ -1,0 +1,50 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+outalator
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Configuration files (may contain secrets)
+config.yaml
+
+# Database files
+*.db
+*.sqlite
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Log files
+*.log
+
+# Environment files
+.env
+.env.local
+
+# Kubernetes secrets (never commit!)
+k8s/base/secret.yaml
+k8s/overlays/*/secret.yaml
+k8s/examples/*/secrets/
+helm/outalator/values-override.yaml
+values-*.yaml
+.secrets/
+secrets/

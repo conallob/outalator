@@ -1,0 +1,30 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+
+database:
+  host: localhost
+  port: 5432
+  user: outalator
+  password: outalator
+  dbname: outalator
+  sslmode: disable
+
+# Optional: Configure OIDC authentication (Okta, Auth0, Google, etc.)
+# auth:
+#   enabled: true
+#   issuer: https://your-company.okta.com
+#   client_id: your-okta-client-id
+#   client_secret: your-okta-client-secret
+#   redirect_url: http://localhost:8080/auth/callback
+#   session_key: generate-a-random-32-byte-base64-key  # openssl rand -base64 32
+
+# Optional: Configure PagerDuty integration
+# pagerduty:
+#   api_key: your-pagerduty-api-key
+#   api_url: https://api.pagerduty.com  # optional, uses default if not specified
+
+# Optional: Configure OpsGenie integration
+# opsgenie:
+#   api_key: your-opsgenie-api-key
+#   api_url: https://api.opsgenie.com  # optional, uses default if not specified

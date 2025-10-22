@@ -1,0 +1,55 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+  # DO NOT include secret.yaml in production - use secretGenerator or external secrets
+  # - secret.yaml
+  - ingress.yaml
+  - postgres.yaml
+
+commonLabels:
+  app.kubernetes.io/name: outalator
+  app.kubernetes.io/part-of: outalator
+
+namespace: outalator
+
+# Option 1: Generate secrets from literal values (for development only)
+# Uncomment and customize for local development:
+# secretGenerator:
+#   - name: outalator-db-secret
+#     literals:
+#       - username=outalator
+#       - password=changeme
+#   - name: outalator-auth-secret
+#     literals:
+#       - client_id=your-okta-client-id
+#       - client_secret=your-okta-client-secret
+#       - session_key=generate-random-key
+
+# Option 2: Generate secrets from files
+# Store secrets in files (gitignored) and reference them:
+# secretGenerator:
+#   - name: outalator-db-secret
+#     files:
+#       - username=secrets/db-username.txt
+#       - password=secrets/db-password.txt
+#   - name: outalator-auth-secret
+#     files:
+#       - client_id=secrets/auth-client-id.txt
+#       - client_secret=secrets/auth-client-secret.txt
+#       - session_key=secrets/auth-session-key.txt
+
+# Option 3: Generate secrets from .env file
+# secretGenerator:
+#   - name: outalator-db-secret
+#     envs:
+#       - secrets/database.env
+#   - name: outalator-auth-secret
+#     envs:
+#       - secrets/auth.env
+
+# For production: Use External Secrets Operator, Sealed Secrets, or Vault
+# See: k8s/examples/ directory for production-ready secret management options

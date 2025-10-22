@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+  - ../../base
+
+namespace: outalator-prod
+
+namePrefix: prod-
+
+replicas:
+  - name: outalator
+    count: 3
+
+configMapGenerator:
+  - name: outalator-config
+    behavior: merge
+    literals:
+      - auth_enabled=true
+
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: outalator
+      spec:
+        template:
+          spec:
+            containers:
+            - name: outalator
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "200m"
+                limits:
+                  memory: "1Gi"
+                  cpu: "1000m"

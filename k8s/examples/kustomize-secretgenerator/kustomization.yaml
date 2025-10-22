@@ -1,0 +1,40 @@
+# Example: Using Kustomize secretGenerator with files
+# This approach keeps secrets in files (gitignored) for local development
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+  - ../../base
+
+namespace: outalator-dev
+
+# Generate secrets from files in the secrets/ directory
+secretGenerator:
+  - name: outalator-db-secret
+    files:
+      - username=secrets/db-username.txt
+      - password=secrets/db-password.txt
+
+  - name: outalator-auth-secret
+    files:
+      - client_id=secrets/auth-client-id.txt
+      - client_secret=secrets/auth-client-secret.txt
+      - session_key=secrets/auth-session-key.txt
+
+# Usage:
+# 1. Create secrets directory:
+#    mkdir -p secrets
+#
+# 2. Generate secret files:
+#    echo -n "outalator" > secrets/db-username.txt
+#    openssl rand -base64 32 | tr -d "=+/" | cut -c1-32 > secrets/db-password.txt
+#    echo -n "your-okta-client-id" > secrets/auth-client-id.txt
+#    echo -n "your-okta-client-secret" > secrets/auth-client-secret.txt
+#    openssl rand -base64 32 > secrets/auth-session-key.txt
+#
+# 3. Add secrets/ to .gitignore:
+#    echo "k8s/examples/kustomize-secretgenerator/secrets/" >> .gitignore
+#
+# 4. Apply:
+#    kubectl apply -k k8s/examples/kustomize-secretgenerator

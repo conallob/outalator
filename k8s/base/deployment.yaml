@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: outalator
+  labels:
+    app: outalator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: outalator
+  template:
+    metadata:
+      labels:
+        app: outalator
+    spec:
+      containers:
+      - name: outalator
+        image: outalator:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: SERVER_HOST
+          value: "0.0.0.0"
+        - name: SERVER_PORT
+          value: "8080"
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: outalator-config
+              key: db_host
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: outalator-config
+              key: db_port
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: outalator-config
+              key: db_name
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: outalator-db-secret
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: outalator-db-secret
+              key: password
+        - name: AUTH_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: outalator-config
+              key: auth_enabled
+        - name: AUTH_ISSUER
+          valueFrom:
+            configMapKeyRef:
+              name: outalator-config
+              key: auth_issuer
+        - name: AUTH_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: outalator-auth-secret
+              key: client_id
+        - name: AUTH_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: outalator-auth-secret
+              key: client_secret
+        - name: AUTH_REDIRECT_URL
+          valueFrom:
+            configMapKeyRef:
+              name: outalator-config
+              key: auth_redirect_url
+        - name: AUTH_SESSION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: outalator-auth-secret
+              key: session_key
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

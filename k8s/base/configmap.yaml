@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: outalator-config
+data:
+  db_host: "postgres"
+  db_port: "5432"
+  db_name: "outalator"
+  auth_enabled: "true"
+  auth_issuer: "https://your-okta-domain.okta.com"
+  auth_redirect_url: "https://outalator.example.com/auth/callback"
