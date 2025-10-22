@@ -1,6 +1,6 @@
 module github.com/conall/outalator
 
-go 1.23.0
+go 1.23
 
 require (
 	github.com/coreos/go-oidc/v3 v3.9.0

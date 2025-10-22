@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outalator - Outage Tracking</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Outalator</h1>
+            <p class="subtitle">SRE Troubleshooting Notes Tracker</p>
+            <nav>
+                <button id="nav-list" class="nav-btn active">Outages</button>
+                <button id="nav-create" class="nav-btn">Create New</button>
+            </nav>
+        </header>
+
+        <main>
+            <!-- List View -->
+            <div id="list-view" class="view active">
+                <div class="controls">
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Search outages...">
+                        <button id="search-btn">Search</button>
+                    </div>
+                    <div class="filters">
+                        <select id="filter-status">
+                            <option value="">All Statuses</option>
+                            <option value="open">Open</option>
+                            <option value="investigating">Investigating</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                        <select id="filter-severity">
+                            <option value="">All Severities</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                        <button id="clear-filters">Clear Filters</button>
+                    </div>
+                    <div class="tag-search">
+                        <input type="text" id="tag-key" placeholder="Tag key">
+                        <input type="text" id="tag-value" placeholder="Tag value">
+                        <button id="tag-search-btn">Search by Tag</button>
+                    </div>
+                </div>
+                <div id="outages-list" class="outages-list">
+                    <div class="loading">Loading outages...</div>
+                </div>
+            </div>
+
+            <!-- Detail View -->
+            <div id="detail-view" class="view">
+                <button id="back-to-list" class="back-btn">← Back to List</button>
+                <div id="outage-detail"></div>
+            </div>
+
+            <!-- Create View -->
+            <div id="create-view" class="view">
+                <h2>Create New Outage</h2>
+                <form id="create-form">
+                    <div class="form-group">
+                        <label for="new-title">Title *</label>
+                        <input type="text" id="new-title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-description">Description</label>
+                        <textarea id="new-description" rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-status">Status *</label>
+                        <select id="new-status" required>
+                            <option value="open">Open</option>
+                            <option value="investigating">Investigating</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-severity">Severity *</label>
+                        <select id="new-severity" required>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Create Outage</button>
+                        <button type="button" id="cancel-create" class="btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <!-- Merge Modal -->
+        <div id="merge-modal" class="modal">
+            <div class="modal-content">
+                <h3>Merge Outages</h3>
+                <p>Select outages to merge into the current outage:</p>
+                <div id="merge-outage-list"></div>
+                <div class="modal-actions">
+                    <button id="confirm-merge" class="btn-primary">Merge Selected</button>
+                    <button id="cancel-merge" class="btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error/Success Messages -->
+        <div id="message-container"></div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
