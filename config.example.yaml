@@ -2,6 +2,12 @@ server:
   host: 0.0.0.0
   port: 8080
 
+# gRPC server configuration
+grpc:
+  enabled: false  # Set to true to enable gRPC API
+  host: 0.0.0.0
+  port: 9090
+
 database:
   host: localhost
   port: 5432

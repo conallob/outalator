@@ -10,6 +10,7 @@ import (
 // Config holds the application configuration
 type Config struct {
 	Server    ServerConfig     `yaml:"server"`
+	GRPC      GRPCConfig       `yaml:"grpc"`
 	Database  DatabaseConfig   `yaml:"database"`
 	Auth      *AuthConfig      `yaml:"auth,omitempty"`
 	PagerDuty *PagerDutyConfig `yaml:"pagerduty,omitempty"`
@@ -20,6 +21,13 @@ type Config struct {
 type ServerConfig struct {
 	Host string `yaml:"host"`
 	Port int    `yaml:"port"`
+}
+
+// GRPCConfig holds gRPC server configuration
+type GRPCConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Host    string `yaml:"host"`
+	Port    int    `yaml:"port"`
 }
 
 // DatabaseConfig holds database configuration
@@ -72,6 +80,17 @@ func Load(path string) (*Config, error) {
 	}
 	if port := os.Getenv("SERVER_PORT"); port != "" {
 		fmt.Sscanf(port, "%d", &cfg.Server.Port)
+	}
+
+	// gRPC configuration
+	if os.Getenv("GRPC_ENABLED") == "true" {
+		cfg.GRPC.Enabled = true
+	}
+	if host := os.Getenv("GRPC_HOST"); host != "" {
+		cfg.GRPC.Host = host
+	}
+	if port := os.Getenv("GRPC_PORT"); port != "" {
+		fmt.Sscanf(port, "%d", &cfg.GRPC.Port)
 	}
 
 	if dbHost := os.Getenv("DB_HOST"); dbHost != "" {
@@ -151,6 +170,11 @@ func Default() *Config {
 		Server: ServerConfig{
 			Host: "0.0.0.0",
 			Port: 8080,
+		},
+		GRPC: GRPCConfig{
+			Enabled: false,
+			Host:    "0.0.0.0",
+			Port:    9090,
 		},
 		Database: DatabaseConfig{
 			Host:    "localhost",

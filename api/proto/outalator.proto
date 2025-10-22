@@ -1,0 +1,317 @@
+syntax = "proto3";
+
+package outalator.v1;
+
+option go_package = "github.com/conallob/outalator/api/proto/v1;outalatorv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// ============================================================================
+// Domain Models
+// ============================================================================
+
+// Outage represents an ongoing or historical incident/outage
+message Outage {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string status = 4;  // "open", "investigating", "resolved", "closed"
+  string severity = 5;  // "critical", "high", "medium", "low"
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  optional google.protobuf.Timestamp resolved_at = 8;
+  repeated Alert alerts = 9;
+  repeated Note notes = 10;
+  repeated Tag tags = 11;
+}
+
+// Alert represents a paging alert from external services
+message Alert {
+  string id = 1;
+  string outage_id = 2;
+  string external_id = 3;
+  string source = 4;  // "pagerduty", "opsgenie", etc.
+  string team_name = 5;
+  string title = 6;
+  string description = 7;
+  string severity = 8;
+  google.protobuf.Timestamp triggered_at = 9;
+  optional google.protobuf.Timestamp acknowledged_at = 10;
+  optional google.protobuf.Timestamp resolved_at = 11;
+  google.protobuf.Timestamp created_at = 12;
+}
+
+// Note represents a troubleshooting note attached to an outage
+message Note {
+  string id = 1;
+  string outage_id = 2;
+  string content = 3;
+  string format = 4;  // "plaintext", "markdown"
+  string author = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// Tag represents metadata for an outage
+message Tag {
+  string id = 1;
+  string outage_id = 2;
+  string key = 3;
+  string value = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// TagInput represents a tag key-value pair for input
+message TagInput {
+  string key = 1;
+  string value = 2;
+}
+
+// ============================================================================
+// Request/Response Messages for Outage Operations
+// ============================================================================
+
+message CreateOutageRequest {
+  string title = 1;
+  string description = 2;
+  string severity = 3;  // "critical", "high", "medium", "low"
+  repeated string alert_ids = 4;  // External alert IDs to associate
+  repeated TagInput tags = 5;
+}
+
+message CreateOutageResponse {
+  Outage outage = 1;
+}
+
+message GetOutageRequest {
+  string id = 1;
+}
+
+message GetOutageResponse {
+  Outage outage = 1;
+}
+
+message ListOutagesRequest {
+  int32 limit = 1;  // Default: 50, Max: 100
+  int32 offset = 2;
+}
+
+message ListOutagesResponse {
+  repeated Outage outages = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+  int32 total = 4;  // Total count of outages (useful for pagination)
+}
+
+message UpdateOutageRequest {
+  string id = 1;
+  optional string title = 2;
+  optional string description = 3;
+  optional string status = 4;
+  optional string severity = 5;
+}
+
+message UpdateOutageResponse {
+  Outage outage = 1;
+}
+
+message DeleteOutageRequest {
+  string id = 1;
+}
+
+// ============================================================================
+// Request/Response Messages for Note Operations
+// ============================================================================
+
+message AddNoteRequest {
+  string outage_id = 1;
+  string content = 2;
+  string format = 3;  // "plaintext", "markdown"
+  string author = 4;  // Set from authenticated context
+}
+
+message AddNoteResponse {
+  Note note = 1;
+}
+
+message GetNoteRequest {
+  string id = 1;
+}
+
+message GetNoteResponse {
+  Note note = 1;
+}
+
+message ListNotesByOutageRequest {
+  string outage_id = 1;
+}
+
+message ListNotesByOutageResponse {
+  repeated Note notes = 1;
+}
+
+message UpdateNoteRequest {
+  string id = 1;
+  optional string content = 2;
+  optional string format = 3;
+}
+
+message UpdateNoteResponse {
+  Note note = 1;
+}
+
+message DeleteNoteRequest {
+  string id = 1;
+}
+
+// ============================================================================
+// Request/Response Messages for Tag Operations
+// ============================================================================
+
+message AddTagRequest {
+  string outage_id = 1;
+  string key = 2;
+  string value = 3;
+}
+
+message AddTagResponse {
+  Tag tag = 1;
+}
+
+message GetTagRequest {
+  string id = 1;
+}
+
+message GetTagResponse {
+  Tag tag = 1;
+}
+
+message ListTagsByOutageRequest {
+  string outage_id = 1;
+}
+
+message ListTagsByOutageResponse {
+  repeated Tag tags = 1;
+}
+
+message DeleteTagRequest {
+  string id = 1;
+}
+
+message SearchOutagesByTagRequest {
+  string key = 1;
+  string value = 2;
+}
+
+message SearchOutagesByTagResponse {
+  repeated Outage outages = 1;
+}
+
+// ============================================================================
+// Request/Response Messages for Alert Operations
+// ============================================================================
+
+message ImportAlertRequest {
+  string source = 1;  // "pagerduty", "opsgenie", etc.
+  string external_id = 2;
+  optional string outage_id = 3;  // If not provided, creates new outage
+}
+
+message ImportAlertResponse {
+  Alert alert = 1;
+  Outage outage = 2;  // The outage this alert is associated with
+}
+
+message GetAlertRequest {
+  string id = 1;
+}
+
+message GetAlertResponse {
+  Alert alert = 1;
+}
+
+message GetAlertByExternalIDRequest {
+  string external_id = 1;
+  string source = 2;
+}
+
+message GetAlertByExternalIDResponse {
+  Alert alert = 1;
+}
+
+message ListAlertsByOutageRequest {
+  string outage_id = 1;
+}
+
+message ListAlertsByOutageResponse {
+  repeated Alert alerts = 1;
+}
+
+message UpdateAlertRequest {
+  string id = 1;
+  optional string title = 2;
+  optional string description = 3;
+  optional string severity = 4;
+  optional google.protobuf.Timestamp acknowledged_at = 5;
+  optional google.protobuf.Timestamp resolved_at = 6;
+}
+
+message UpdateAlertResponse {
+  Alert alert = 1;
+}
+
+// ============================================================================
+// Health Check
+// ============================================================================
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+}
+
+// ============================================================================
+// Service Definitions
+// ============================================================================
+
+// OutageService manages outages
+service OutageService {
+  rpc CreateOutage(CreateOutageRequest) returns (CreateOutageResponse);
+  rpc GetOutage(GetOutageRequest) returns (GetOutageResponse);
+  rpc ListOutages(ListOutagesRequest) returns (ListOutagesResponse);
+  rpc UpdateOutage(UpdateOutageRequest) returns (UpdateOutageResponse);
+  rpc DeleteOutage(DeleteOutageRequest) returns (google.protobuf.Empty);
+}
+
+// NoteService manages notes on outages
+service NoteService {
+  rpc AddNote(AddNoteRequest) returns (AddNoteResponse);
+  rpc GetNote(GetNoteRequest) returns (GetNoteResponse);
+  rpc ListNotesByOutage(ListNotesByOutageRequest) returns (ListNotesByOutageResponse);
+  rpc UpdateNote(UpdateNoteRequest) returns (UpdateNoteResponse);
+  rpc DeleteNote(DeleteNoteRequest) returns (google.protobuf.Empty);
+}
+
+// TagService manages tags on outages
+service TagService {
+  rpc AddTag(AddTagRequest) returns (AddTagResponse);
+  rpc GetTag(GetTagRequest) returns (GetTagResponse);
+  rpc ListTagsByOutage(ListTagsByOutageRequest) returns (ListTagsByOutageResponse);
+  rpc DeleteTag(DeleteTagRequest) returns (google.protobuf.Empty);
+  rpc SearchOutagesByTag(SearchOutagesByTagRequest) returns (SearchOutagesByTagResponse);
+}
+
+// AlertService manages alerts from external paging systems
+service AlertService {
+  rpc ImportAlert(ImportAlertRequest) returns (ImportAlertResponse);
+  rpc GetAlert(GetAlertRequest) returns (GetAlertResponse);
+  rpc GetAlertByExternalID(GetAlertByExternalIDRequest) returns (GetAlertByExternalIDResponse);
+  rpc ListAlertsByOutage(ListAlertsByOutageRequest) returns (ListAlertsByOutageResponse);
+  rpc UpdateAlert(UpdateAlertRequest) returns (UpdateAlertResponse);
+}
+
+// HealthService provides health check
+service HealthService {
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+}
