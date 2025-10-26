@@ -34,3 +34,10 @@ database:
 # opsgenie:
 #   api_key: your-opsgenie-api-key
 #   api_url: https://api.opsgenie.com  # optional, uses default if not specified
+
+# Optional: Configure Slack bot integration
+# slack:
+#   enabled: false
+#   bot_token: xoxb-your-bot-token
+#   signing_secret: your-signing-secret
+#   reaction_emoji: outage_note  # Emoji for tagging messages (without colons)
