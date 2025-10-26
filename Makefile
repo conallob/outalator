@@ -25,6 +25,13 @@ build: ## Build the application
 	@go build -o bin/outalator cmd/outalator/main.go
 	@echo "✓ Built: bin/outalator"
 
+build-import: ## Build the import-history tool
+	@go build -o bin/import-history cmd/import-history/main.go
+	@echo "✓ Built: bin/import-history"
+
+build-all: build build-import ## Build all binaries
+	@echo "✓ Built all binaries"
+
 run: ## Run the application
 	@go run cmd/outalator/main.go
 

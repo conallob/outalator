@@ -71,6 +71,31 @@ Or run directly:
 go run cmd/outalator/main.go -config config.yaml
 ```
 
+## Importing Historical Data
+
+Outalator includes a tool to bootstrap your database with historical incidents from PagerDuty or OpsGenie.
+
+### Quick Start
+
+```bash
+# Build the import tool
+make build-import
+
+# List available teams
+./bin/import-history -service pagerduty -list-teams
+
+# Import historical data (dry run first)
+./bin/import-history -service pagerduty -since 2024-01-01T00:00:00Z -dry-run
+
+# Import for real
+./bin/import-history -service pagerduty -since 2024-01-01T00:00:00Z
+
+# Import specific teams only
+./bin/import-history -service pagerduty -since 2024-01-01T00:00:00Z -teams "TEAM_ID_1,TEAM_ID_2"
+```
+
+For complete documentation including examples, troubleshooting, and best practices, see [docs/IMPORT_HISTORY.md](docs/IMPORT_HISTORY.md).
+
 ## Configuration
 
 Configuration can be provided via YAML file and/or environment variables.
@@ -319,7 +344,8 @@ go test ./...
 ```
 outalator/
 ├── cmd/
-│   └── outalator/          # Main application entry point
+│   ├── outalator/          # Main application entry point
+│   └── import-history/     # Historical data import tool
 ├── internal/
 │   ├── api/                # HTTP handlers and routes
 │   ├── config/             # Configuration management
