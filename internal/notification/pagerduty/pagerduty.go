@@ -177,6 +177,155 @@ func (s *Service) FetchRecentAlerts(ctx context.Context, since time.Time) ([]*no
 	return alerts, nil
 }
 
+// HistoricalFetchOptions holds options for fetching historical incidents
+type HistoricalFetchOptions struct {
+	Since     time.Time
+	Until     time.Time
+	TeamIDs   []string
+	Limit     int
+	Offset    int
+}
+
+// FetchHistoricalIncidents retrieves incidents from PagerDuty with advanced filtering and pagination
+func (s *Service) FetchHistoricalIncidents(ctx context.Context, opts HistoricalFetchOptions) ([]*notification.Alert, bool, error) {
+	url := fmt.Sprintf("%s/incidents?since=%s", s.apiURL, opts.Since.Format(time.RFC3339))
+
+	if !opts.Until.IsZero() {
+		url += fmt.Sprintf("&until=%s", opts.Until.Format(time.RFC3339))
+	}
+
+	if len(opts.TeamIDs) > 0 {
+		for _, teamID := range opts.TeamIDs {
+			url += fmt.Sprintf("&team_ids[]=%s", teamID)
+		}
+	}
+
+	limit := opts.Limit
+	if limit == 0 {
+		limit = 100 // Default limit
+	}
+	url += fmt.Sprintf("&limit=%d&offset=%d", limit, opts.Offset)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Token token=%s", s.apiKey))
+	req.Header.Set("Accept", "application/vnd.pagerduty+json;version=2")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to fetch incidents: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, false, fmt.Errorf("PagerDuty API error: %s (status: %d)", string(body), resp.StatusCode)
+	}
+
+	var result struct {
+		Incidents []struct {
+			ID             string    `json:"id"`
+			Title          string    `json:"title"`
+			Description    string    `json:"description"`
+			Status         string    `json:"status"`
+			Urgency        string    `json:"urgency"`
+			CreatedAt      time.Time `json:"created_at"`
+			AcknowledgedAt *time.Time `json:"acknowledged_at"`
+			ResolvedAt     *time.Time `json:"resolved_at"`
+			Service        struct {
+				Summary string `json:"summary"`
+			} `json:"service"`
+			Teams []struct {
+				ID      string `json:"id"`
+				Summary string `json:"summary"`
+			} `json:"teams"`
+		} `json:"incidents"`
+		More   bool `json:"more"`
+		Limit  int  `json:"limit"`
+		Offset int  `json:"offset"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, false, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	alerts := make([]*notification.Alert, 0, len(result.Incidents))
+	for _, incident := range result.Incidents {
+		teamName := "unknown"
+		if len(incident.Teams) > 0 {
+			teamName = incident.Teams[0].Summary
+		}
+
+		alerts = append(alerts, &notification.Alert{
+			ExternalID:     incident.ID,
+			Source:         "pagerduty",
+			TeamName:       teamName,
+			Title:          incident.Title,
+			Description:    incident.Description,
+			Severity:       incident.Urgency,
+			TriggeredAt:    incident.CreatedAt,
+			AcknowledgedAt: incident.AcknowledgedAt,
+			ResolvedAt:     incident.ResolvedAt,
+		})
+	}
+
+	return alerts, result.More, nil
+}
+
+// ListTeams retrieves all teams from PagerDuty
+func (s *Service) ListTeams(ctx context.Context) ([]Team, error) {
+	url := fmt.Sprintf("%s/teams", s.apiURL)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Token token=%s", s.apiKey))
+	req.Header.Set("Accept", "application/vnd.pagerduty+json;version=2")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch teams: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("PagerDuty API error: %s (status: %d)", string(body), resp.StatusCode)
+	}
+
+	var result struct {
+		Teams []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"teams"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	teams := make([]Team, len(result.Teams))
+	for i, team := range result.Teams {
+		teams[i] = Team{
+			ID:   team.ID,
+			Name: team.Name,
+		}
+	}
+
+	return teams, nil
+}
+
+// Team represents a team from PagerDuty or OpsGenie
+type Team struct {
+	ID   string
+	Name string
+}
+
 // WebhookHandler returns an HTTP handler for PagerDuty webhooks
 func (s *Service) WebhookHandler() interface{} {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
