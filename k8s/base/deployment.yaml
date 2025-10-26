@@ -82,6 +82,31 @@ spec:
             secretKeyRef:
               name: outalator-auth-secret
               key: session_key
+        # Slack bot configuration (optional)
+        - name: SLACK_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: outalator-config
+              key: slack_enabled
+              optional: true
+        - name: SLACK_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: outalator-slack-secret
+              key: bot_token
+              optional: true
+        - name: SLACK_SIGNING_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: outalator-slack-secret
+              key: signing_secret
+              optional: true
+        - name: SLACK_REACTION_EMOJI
+          valueFrom:
+            configMapKeyRef:
+              name: outalator-config
+              key: slack_reaction_emoji
+              optional: true
         livenessProbe:
           httpGet:
             path: /health

@@ -278,14 +278,25 @@ Outalator includes a Slack bot that allows teams to interact with outages direct
 ### Quick Start
 
 1. Create a Slack app and get your bot token and signing secret
-2. Configure Outalator:
+2. Configure Outalator using your preferred method:
 
+**Config file:**
 ```yaml
 slack:
   enabled: true
   bot_token: xoxb-your-bot-token
   signing_secret: your-signing-secret
-  reaction_emoji: outage_note  # The emoji for tagging messages
+  reaction_emoji: outage_note  # Any emoji name without colons
+```
+
+**CLI flags:**
+```bash
+./outalator -slack-enabled -slack-bot-token=xoxb-... -slack-reaction-emoji=bookmark
+```
+
+**Environment variables:**
+```bash
+export SLACK_ENABLED=true SLACK_BOT_TOKEN=xoxb-... SLACK_REACTION_EMOJI=memo
 ```
 
 3. Set up event subscriptions in Slack to point to `https://your-server.com/slack/events`
@@ -304,7 +315,7 @@ note 123e4567-e89b-12d3-a456-426614174000 Restarted the API gateway service
 
 **Tag a message:**
 1. Post a message mentioning the outage ID
-2. React with `:outage_note:` emoji
+2. React with your configured emoji (e.g., `:outage_note:`, `:bookmark:`, etc.)
 3. The message is automatically added as a note
 
 For complete setup instructions and troubleshooting, see [docs/SLACK_INTEGRATION.md](docs/SLACK_INTEGRATION.md).

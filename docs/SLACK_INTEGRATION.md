@@ -39,7 +39,9 @@ The Outalator Slack bot allows teams to interact with the outage database direct
 
 ### 3. Configure Outalator
 
-Add to your `config.yaml`:
+The Slack bot can be configured in multiple ways. Choose the method that best fits your deployment:
+
+#### Option A: Configuration File (config.yaml)
 
 ```yaml
 slack:
@@ -49,7 +51,7 @@ slack:
   reaction_emoji: outage_note  # The emoji for tagging messages (without colons)
 ```
 
-Or use environment variables:
+#### Option B: Environment Variables
 
 ```bash
 export SLACK_ENABLED=true
@@ -58,13 +60,65 @@ export SLACK_SIGNING_SECRET=your-signing-secret-here
 export SLACK_REACTION_EMOJI=outage_note
 ```
 
-### 4. Create Custom Emoji (Optional)
+#### Option C: CLI Flags
 
-For a better experience, create a custom emoji in your Slack workspace:
+```bash
+./outalator \
+  -slack-enabled \
+  -slack-bot-token=xoxb-your-bot-token-here \
+  -slack-signing-secret=your-signing-secret-here \
+  -slack-reaction-emoji=outage_note
+```
 
+CLI flags take precedence over environment variables and config file values.
+
+#### Option D: Kubernetes (Kustomize)
+
+Update `k8s/base/configmap.yaml`:
+
+```yaml
+data:
+  slack_enabled: "true"
+  slack_reaction_emoji: "outage_note"  # Customize this to your preferred emoji
+```
+
+Update `k8s/base/secret.yaml` (or use a secret manager):
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: outalator-slack-secret
+type: Opaque
+stringData:
+  bot_token: "xoxb-your-slack-bot-token"
+  signing_secret: "your-slack-signing-secret"
+```
+
+Then apply with:
+```bash
+kubectl apply -k k8s/overlays/prod
+```
+
+### 4. Choosing Your Reaction Emoji
+
+The reaction emoji is **fully configurable** - you can use any emoji available in your Slack workspace. The default is `outage_note`, but you can change it to any emoji name (without colons).
+
+**Examples of emoji names you could use:**
+- `outage_note` (default)
+- `bookmark` (built-in Slack emoji)
+- `pushpin` (built-in Slack emoji)
+- `memo` (built-in Slack emoji)
+- `incident` (if you create a custom emoji)
+- `sre` (if you create a custom emoji)
+
+**To use a built-in Slack emoji:**
+Set the emoji name in your configuration (e.g., `reaction_emoji: bookmark`)
+
+**To create a custom emoji:**
 1. Go to your Slack workspace → Customize → Emoji
-2. Upload an icon for `:outage_note:`
-3. This emoji will be used to tag messages for adding to outages
+2. Upload an icon and give it a name (e.g., `outage_note`)
+3. Use that name in your configuration
 
 ## Usage
 

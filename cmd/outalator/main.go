@@ -23,13 +23,44 @@ import (
 )
 
 func main() {
+	// CLI flags
 	configPath := flag.String("config", "config.yaml", "Path to configuration file")
+	slackEnabled := flag.Bool("slack-enabled", false, "Enable Slack bot integration")
+	slackBotToken := flag.String("slack-bot-token", "", "Slack bot OAuth token")
+	slackSigningSecret := flag.String("slack-signing-secret", "", "Slack signing secret for request verification")
+	slackReactionEmoji := flag.String("slack-reaction-emoji", "", "Slack emoji name (without colons) for tagging messages as outage notes")
 	flag.Parse()
 
 	// Load configuration
 	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Apply CLI flag overrides for Slack
+	if *slackEnabled {
+		if cfg.Slack == nil {
+			cfg.Slack = &config.SlackConfig{}
+		}
+		cfg.Slack.Enabled = true
+	}
+	if *slackBotToken != "" {
+		if cfg.Slack == nil {
+			cfg.Slack = &config.SlackConfig{}
+		}
+		cfg.Slack.BotToken = *slackBotToken
+	}
+	if *slackSigningSecret != "" {
+		if cfg.Slack == nil {
+			cfg.Slack = &config.SlackConfig{}
+		}
+		cfg.Slack.SigningSecret = *slackSigningSecret
+	}
+	if *slackReactionEmoji != "" {
+		if cfg.Slack == nil {
+			cfg.Slack = &config.SlackConfig{}
+		}
+		cfg.Slack.ReactionEmoji = *slackReactionEmoji
 	}
 
 	// Initialize database connection
