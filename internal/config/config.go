@@ -15,6 +15,7 @@ type Config struct {
 	Auth      *AuthConfig      `yaml:"auth,omitempty"`
 	PagerDuty *PagerDutyConfig `yaml:"pagerduty,omitempty"`
 	OpsGenie  *OpsGenieConfig  `yaml:"opsgenie,omitempty"`
+	Slack     *SlackConfig     `yaml:"slack,omitempty"`
 }
 
 // ServerConfig holds HTTP server configuration
@@ -60,6 +61,14 @@ type PagerDutyConfig struct {
 type OpsGenieConfig struct {
 	APIKey string `yaml:"api_key"`
 	APIURL string `yaml:"api_url,omitempty"`
+}
+
+// SlackConfig holds Slack bot configuration
+type SlackConfig struct {
+	Enabled       bool   `yaml:"enabled"`
+	BotToken      string `yaml:"bot_token"`
+	SigningSecret string `yaml:"signing_secret"`
+	ReactionEmoji string `yaml:"reaction_emoji"` // Emoji for tagging messages
 }
 
 // Load loads configuration from a YAML file
@@ -159,6 +168,32 @@ func Load(path string) (*Config, error) {
 			cfg.Auth = &AuthConfig{}
 		}
 		cfg.Auth.SessionKey = sessionKey
+	}
+
+	// Slack environment variables
+	if os.Getenv("SLACK_ENABLED") == "true" {
+		if cfg.Slack == nil {
+			cfg.Slack = &SlackConfig{}
+		}
+		cfg.Slack.Enabled = true
+	}
+	if botToken := os.Getenv("SLACK_BOT_TOKEN"); botToken != "" {
+		if cfg.Slack == nil {
+			cfg.Slack = &SlackConfig{}
+		}
+		cfg.Slack.BotToken = botToken
+	}
+	if signingSecret := os.Getenv("SLACK_SIGNING_SECRET"); signingSecret != "" {
+		if cfg.Slack == nil {
+			cfg.Slack = &SlackConfig{}
+		}
+		cfg.Slack.SigningSecret = signingSecret
+	}
+	if reactionEmoji := os.Getenv("SLACK_REACTION_EMOJI"); reactionEmoji != "" {
+		if cfg.Slack == nil {
+			cfg.Slack = &SlackConfig{}
+		}
+		cfg.Slack.ReactionEmoji = reactionEmoji
 	}
 
 	return &cfg, nil

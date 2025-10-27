@@ -9,3 +9,6 @@ data:
   auth_enabled: "true"
   auth_issuer: "https://your-okta-domain.okta.com"
   auth_redirect_url: "https://outalator.example.com/auth/callback"
+  # Slack bot configuration (optional)
+  slack_enabled: "false"
+  slack_reaction_emoji: "outage_note"  # Emoji name without colons for tagging messages

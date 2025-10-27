@@ -13,6 +13,12 @@ A modern web application for tracking outage troubleshooting notes for Site Reli
 - **Tagging System**: Organize outages with flexible key-value tags (e.g., Jira tickets, services, regions)
 - **Modular Storage**: Interface-based storage layer with PostgreSQL implementation
 - **RESTful API**: Clean HTTP API for all operations
+- **Slack Bot Integration**: Interact with outages directly from Slack
+  - Create outages and add notes via messages
+  - Tag messages with emoji reactions to add them as notes
+- **MCP Server**: Model Context Protocol interface for AI assistants
+  - Claude Desktop integration
+  - Natural language outage management
 
 ## Architecture
 
@@ -30,6 +36,8 @@ The application is built with Go and follows clean architecture principles:
 - PostgreSQL 12 or higher
 - (Optional) PagerDuty API key
 - (Optional) OpsGenie API key
+- (Optional) Slack workspace with bot permissions
+- (Optional) Claude Desktop for MCP integration
 
 ## Installation
 
@@ -257,6 +265,109 @@ openssl rand -base64 32
 
 When authentication is disabled, the application runs without authentication (useful for development).
 
+## Slack Bot Integration
+
+Outalator includes a Slack bot that allows teams to interact with outages directly from Slack.
+
+### Features
+
+- Create outages using simple text commands
+- Add notes to outages via direct messages
+- Tag existing Slack messages to add them as notes using emoji reactions
+
+### Quick Start
+
+1. Create a Slack app and get your bot token and signing secret
+2. Configure Outalator using your preferred method:
+
+**Config file:**
+```yaml
+slack:
+  enabled: true
+  bot_token: xoxb-your-bot-token
+  signing_secret: your-signing-secret
+  reaction_emoji: outage_note  # Any emoji name without colons
+```
+
+**CLI flags:**
+```bash
+./outalator -slack-enabled -slack-bot-token=xoxb-... -slack-reaction-emoji=bookmark
+```
+
+**Environment variables:**
+```bash
+export SLACK_ENABLED=true SLACK_BOT_TOKEN=xoxb-... SLACK_REACTION_EMOJI=memo
+```
+
+3. Set up event subscriptions in Slack to point to `https://your-server.com/slack/events`
+
+### Usage Examples
+
+**Create an outage:**
+```
+outage API Gateway is down | Users cannot authenticate | critical
+```
+
+**Add a note:**
+```
+note 123e4567-e89b-12d3-a456-426614174000 Restarted the API gateway service
+```
+
+**Tag a message:**
+1. Post a message mentioning the outage ID
+2. React with your configured emoji (e.g., `:outage_note:`, `:bookmark:`, etc.)
+3. The message is automatically added as a note
+
+For complete setup instructions and troubleshooting, see [docs/SLACK_INTEGRATION.md](docs/SLACK_INTEGRATION.md).
+
+## MCP Server for AI Assistants
+
+The MCP (Model Context Protocol) server provides a standardized interface for AI assistants like Claude to interact with outages.
+
+### Running the MCP Server
+
+```bash
+# Build the MCP server
+go build -o mcp-server ./cmd/mcp-server
+
+# Run it
+./mcp-server -config config.yaml
+```
+
+### Claude Desktop Integration
+
+Add to your Claude Desktop configuration:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "outalator": {
+      "command": "/path/to/outalator/mcp-server",
+      "args": ["-config", "/path/to/config.yaml"]
+    }
+  }
+}
+```
+
+### Available Tools
+
+- `list_outages`: List all outages with pagination
+- `get_outage`: Get details of a specific outage
+- `create_outage`: Create a new outage entry
+- `add_note`: Add a note to an existing outage
+- `update_outage`: Update an outage's status or severity
+
+### Example AI Interactions
+
+- "What outages have we had in the past week?"
+- "Create an outage for the database connection issues"
+- "Add a note that we restarted the Redis cluster"
+- "Update outage 123... to resolved status"
+
+For complete documentation, see [docs/MCP_SERVER.md](docs/MCP_SERVER.md).
+
 ## Kubernetes Deployment
 
 Outalator can be deployed to Kubernetes using either Helm or Kustomize.
@@ -345,17 +456,23 @@ go test ./...
 outalator/
 ├── cmd/
 │   ├── outalator/          # Main application entry point
+│   ├── mcp-server/         # MCP server for AI assistants
 │   └── import-history/     # Historical data import tool
 ├── internal/
 │   ├── api/                # HTTP handlers and routes
 │   ├── config/             # Configuration management
 │   ├── domain/             # Domain models and DTOs
+│   ├── mcp/                # MCP server implementation
+│   ├── slack/              # Slack bot integration
 │   ├── notification/       # Notification service integrations
 │   │   ├── opsgenie/
 │   │   └── pagerduty/
 │   ├── service/            # Business logic
 │   └── storage/            # Storage layer
 │       └── postgres/       # PostgreSQL implementation
+├── docs/                   # Documentation
+│   ├── SLACK_INTEGRATION.md
+│   └── MCP_SERVER.md
 ├── migrations/             # Database migration scripts
 ├── config.example.yaml     # Example configuration file
 ├── go.mod                  # Go module definition
