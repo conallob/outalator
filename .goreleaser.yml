@@ -1,0 +1,134 @@
+# GoReleaser configuration for Outalator
+# https://goreleaser.com
+
+version: 2
+
+# Project metadata
+project_name: outalator
+
+before:
+  hooks:
+    # Ensure dependencies are up to date
+    - go mod tidy
+
+# Build configuration
+builds:
+  - id: outalator
+    main: ./cmd/outalator
+    binary: outalator
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+# Docker image configuration
+dockers:
+  # Docker image for amd64
+  - image_templates:
+      - "ghcr.io/conallob/outalator:{{ .Tag }}-amd64"
+      - "ghcr.io/conallob/outalator:latest-amd64"
+    use: buildx
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description=Troubleshooting notes tracking tool for SREs"
+      - "--label=org.opencontainers.image.url=https://github.com/conallob/outalator"
+      - "--label=org.opencontainers.image.source=https://github.com/conallob/outalator"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+    goos: linux
+    goarch: amd64
+
+  # Docker image for arm64
+  - image_templates:
+      - "ghcr.io/conallob/outalator:{{ .Tag }}-arm64"
+      - "ghcr.io/conallob/outalator:latest-arm64"
+    use: buildx
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description=Troubleshooting notes tracking tool for SREs"
+      - "--label=org.opencontainers.image.url=https://github.com/conallob/outalator"
+      - "--label=org.opencontainers.image.source=https://github.com/conallob/outalator"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+    goos: linux
+    goarch: arm64
+
+# Docker manifest for multi-arch support
+docker_manifests:
+  - name_template: "ghcr.io/conallob/outalator:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/conallob/outalator:{{ .Tag }}-amd64"
+      - "ghcr.io/conallob/outalator:{{ .Tag }}-arm64"
+
+  - name_template: "ghcr.io/conallob/outalator:latest"
+    image_templates:
+      - "ghcr.io/conallob/outalator:latest-amd64"
+      - "ghcr.io/conallob/outalator:latest-arm64"
+
+# Archive configuration for binary releases
+archives:
+  - id: outalator
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE*
+      - config.example.yaml
+      - migrations/*
+
+# Checksum generation
+checksum:
+  name_template: "checksums.txt"
+
+# Snapshot configuration for development builds
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+# Changelog generation
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "merge conflict"
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+
+# GitHub Release configuration
+release:
+  github:
+    owner: conallob
+    name: outalator
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
