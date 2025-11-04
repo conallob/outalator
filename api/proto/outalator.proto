@@ -6,6 +6,7 @@ option go_package = "github.com/conallob/outalator/api/proto/v1;outalatorv1";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
 
 // ============================================================================
 // Domain Models
@@ -24,6 +25,37 @@ message Outage {
   repeated Alert alerts = 9;
   repeated Note notes = 10;
   repeated Tag tags = 11;
+
+  // Custom metadata for extensibility
+  map<string, string> metadata = 12;  // Simple key-value pairs
+  google.protobuf.Struct custom_fields = 13;  // Complex structured data
+}
+
+// PagerDutyMetadata contains PagerDuty-specific alert information
+message PagerDutyMetadata {
+  string incident_key = 1;
+  string service_id = 2;
+  string service_name = 3;
+  string escalation_policy = 4;
+  repeated string assignees = 5;
+  string urgency = 6;  // "high", "low"
+  string html_url = 7;
+}
+
+// OpsGenieMetadata contains OpsGenie-specific alert information
+message OpsGenieMetadata {
+  string alias = 1;
+  string entity = 2;
+  repeated string responders = 3;
+  repeated string visible_to = 4;
+  repeated string actions = 5;
+  string priority = 6;  // P1, P2, P3, P4, P5
+  string owner = 7;
+}
+
+// GenericMetadata for other alert sources
+message GenericMetadata {
+  map<string, string> properties = 1;
 }
 
 // Alert represents a paging alert from external services
@@ -40,6 +72,17 @@ message Alert {
   optional google.protobuf.Timestamp acknowledged_at = 10;
   optional google.protobuf.Timestamp resolved_at = 11;
   google.protobuf.Timestamp created_at = 12;
+
+  // Source-specific metadata
+  oneof source_metadata {
+    PagerDutyMetadata pagerduty = 13;
+    OpsGenieMetadata opsgenie = 14;
+    GenericMetadata generic = 15;
+  }
+
+  // Custom metadata for extensibility
+  map<string, string> metadata = 16;  // Simple key-value pairs
+  google.protobuf.Struct custom_fields = 17;  // Complex structured data
 }
 
 // Note represents a troubleshooting note attached to an outage
@@ -51,6 +94,10 @@ message Note {
   string author = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+
+  // Custom metadata for extensibility
+  map<string, string> metadata = 8;  // Simple key-value pairs (e.g., version, source_file)
+  google.protobuf.Struct custom_fields = 9;  // Complex structured data (e.g., attachments, links)
 }
 
 // Tag represents metadata for an outage
@@ -60,12 +107,16 @@ message Tag {
   string key = 3;
   string value = 4;
   google.protobuf.Timestamp created_at = 5;
+
+  // Additional structured data for the tag
+  google.protobuf.Struct custom_fields = 6;  // e.g., URLs, related IDs, rich metadata
 }
 
 // TagInput represents a tag key-value pair for input
 message TagInput {
   string key = 1;
   string value = 2;
+  google.protobuf.Struct custom_fields = 3;  // Optional custom data
 }
 
 // ============================================================================
@@ -78,6 +129,8 @@ message CreateOutageRequest {
   string severity = 3;  // "critical", "high", "medium", "low"
   repeated string alert_ids = 4;  // External alert IDs to associate
   repeated TagInput tags = 5;
+  map<string, string> metadata = 6;  // Custom metadata
+  google.protobuf.Struct custom_fields = 7;  // Custom structured data
 }
 
 message CreateOutageResponse {
@@ -110,6 +163,8 @@ message UpdateOutageRequest {
   optional string description = 3;
   optional string status = 4;
   optional string severity = 5;
+  map<string, string> metadata = 6;  // Updated metadata (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
+  google.protobuf.Struct custom_fields = 7;  // Updated custom fields (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
 }
 
 message UpdateOutageResponse {
@@ -129,6 +184,8 @@ message AddNoteRequest {
   string content = 2;
   string format = 3;  // "plaintext", "markdown"
   string author = 4;  // Set from authenticated context
+  map<string, string> metadata = 5;  // Custom metadata
+  google.protobuf.Struct custom_fields = 6;  // Custom structured data
 }
 
 message AddNoteResponse {
@@ -155,6 +212,8 @@ message UpdateNoteRequest {
   string id = 1;
   optional string content = 2;
   optional string format = 3;
+  map<string, string> metadata = 4;  // Updated metadata (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
+  google.protobuf.Struct custom_fields = 5;  // Updated custom fields (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
 }
 
 message UpdateNoteResponse {
@@ -173,6 +232,7 @@ message AddTagRequest {
   string outage_id = 1;
   string key = 2;
   string value = 3;
+  google.protobuf.Struct custom_fields = 4;  // Custom structured data
 }
 
 message AddTagResponse {
@@ -216,6 +276,17 @@ message ImportAlertRequest {
   string source = 1;  // "pagerduty", "opsgenie", etc.
   string external_id = 2;
   optional string outage_id = 3;  // If not provided, creates new outage
+
+  // Source-specific metadata (optional)
+  oneof source_metadata {
+    PagerDutyMetadata pagerduty = 4;
+    OpsGenieMetadata opsgenie = 5;
+    GenericMetadata generic = 6;
+  }
+
+  // Custom metadata
+  map<string, string> metadata = 7;
+  google.protobuf.Struct custom_fields = 8;
 }
 
 message ImportAlertResponse {
@@ -255,6 +326,8 @@ message UpdateAlertRequest {
   optional string severity = 4;
   optional google.protobuf.Timestamp acknowledged_at = 5;
   optional google.protobuf.Timestamp resolved_at = 6;
+  map<string, string> metadata = 7;  // Updated metadata (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
+  google.protobuf.Struct custom_fields = 8;  // Updated custom fields (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
 }
 
 message UpdateAlertResponse {

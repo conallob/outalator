@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 
+	"github.com/conall/outalator/internal/domain"
 	"github.com/conall/outalator/internal/service"
 	"github.com/google/uuid"
 )
@@ -301,23 +302,12 @@ func (s *Server) toolCreateOutage(ctx context.Context, args map[string]interface
 		return nil, fmt.Errorf("severity is required")
 	}
 
-	req := struct {
-		Title       string   `json:"title"`
-		Description string   `json:"description"`
-		Severity    string   `json:"severity"`
-		AlertIDs    []string `json:"alert_ids"`
-		Tags        []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		} `json:"tags,omitempty"`
-	}{
+	req := domain.CreateOutageRequest{
 		Title:       title,
 		Description: description,
 		Severity:    severity,
 	}
 
-	// Convert to domain.CreateOutageRequest
-	// This is a simplified conversion; you may need to expand this
 	outage, err := s.service.CreateOutage(ctx, req)
 	if err != nil {
 		return nil, err
@@ -360,11 +350,7 @@ func (s *Server) toolAddNote(ctx context.Context, args map[string]interface{}) (
 		format = f
 	}
 
-	req := struct {
-		Content string `json:"content"`
-		Format  string `json:"format"`
-		Author  string `json:"author"`
-	}{
+	req := domain.AddNoteRequest{
 		Content: content,
 		Format:  format,
 		Author:  author,
@@ -397,12 +383,7 @@ func (s *Server) toolUpdateOutage(ctx context.Context, args map[string]interface
 		return nil, fmt.Errorf("invalid outage_id: %w", err)
 	}
 
-	req := struct {
-		Title       *string `json:"title,omitempty"`
-		Description *string `json:"description,omitempty"`
-		Status      *string `json:"status,omitempty"`
-		Severity    *string `json:"severity,omitempty"`
-	}{}
+	req := domain.UpdateOutageRequest{}
 
 	if title, ok := args["title"].(string); ok {
 		req.Title = &title

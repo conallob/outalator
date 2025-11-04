@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/conall/outalator/internal/domain"
 	"github.com/conall/outalator/internal/service"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -177,11 +178,7 @@ func (b *Bot) handleNoteCommand(ctx context.Context, msg MessageEvent) {
 	// Get user info for author
 	author := b.getUserName(msg.User)
 
-	req := struct {
-		Content string `json:"content"`
-		Format  string `json:"format"`
-		Author  string `json:"author"`
-	}{
+	req := domain.AddNoteRequest{
 		Content: content,
 		Format:  "plaintext",
 		Author:  author,
@@ -222,22 +219,14 @@ func (b *Bot) handleOutageCommand(ctx context.Context, msg MessageEvent) {
 		return
 	}
 
-	req := struct {
-		Title       string   `json:"title"`
-		Description string   `json:"description"`
-		Severity    string   `json:"severity"`
-		AlertIDs    []string `json:"alert_ids"`
-		Tags        []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		} `json:"tags,omitempty"`
-	}{
+	req := domain.CreateOutageRequest{
 		Title:       title,
 		Description: description,
 		Severity:    severity,
 		Tags: []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
+			Key          string         `json:"key"`
+			Value        string         `json:"value"`
+			CustomFields map[string]any `json:"custom_fields,omitempty"`
 		}{
 			{Key: "slack_channel", Value: msg.Channel},
 			{Key: "slack_user", Value: msg.User},
@@ -294,11 +283,7 @@ func (b *Bot) handleReactionAdded(ctx context.Context, eventData json.RawMessage
 	author := b.getUserName(reaction.User)
 
 	// Add the message as a note
-	req := struct {
-		Content string `json:"content"`
-		Format  string `json:"format"`
-		Author  string `json:"author"`
-	}{
+	req := domain.AddNoteRequest{
 		Content: messageText,
 		Format:  "plaintext",
 		Author:  author,

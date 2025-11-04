@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	_ "github.com/lib/pq"
@@ -45,4 +46,24 @@ func New(cfg Config) (*PostgresStorage, error) {
 // Close closes the database connection
 func (s *PostgresStorage) Close() error {
 	return s.db.Close()
+}
+
+// marshalJSONMap safely marshals a map, returning {} for nil maps instead of null
+func marshalJSONMap(m map[string]string) ([]byte, error) {
+	if m == nil {
+		return []byte("{}"), nil
+	}
+	return json.Marshal(m)
+}
+
+// marshalJSONAny safely marshals any value, returning {} for nil maps instead of null
+func marshalJSONAny(v any) ([]byte, error) {
+	if v == nil {
+		return []byte("{}"), nil
+	}
+	// Check if it's a nil map
+	if m, ok := v.(map[string]any); ok && m == nil {
+		return []byte("{}"), nil
+	}
+	return json.Marshal(v)
 }
