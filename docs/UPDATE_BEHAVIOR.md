@@ -1,5 +1,29 @@
 # Update Behavior for Metadata and Custom Fields
 
+## 📌 Quick Summary
+
+**⚠️ IMPORTANT: All update operations use FULL REPLACEMENT for `metadata` and `custom_fields`.**
+
+When you update these fields:
+- ✅ The **entire** field is replaced with your new value
+- ⚠️ Keys not included in your update will be **permanently deleted**
+- ✅ This behavior is consistent across REST API, gRPC API, and all entity types
+- ✅ To preserve existing keys, fetch the entity first and merge locally
+
+## Affected Entities
+
+This behavior applies to:
+- **Outages**: `metadata`, `custom_fields`
+- **Alerts**: `metadata`, `custom_fields`, `source_metadata`
+- **Notes**: `metadata`, `custom_fields`
+- **Tags**: `custom_fields`
+
+## Affected Operations
+
+- REST: `PUT /outages/:id`, `PUT /notes/:id`
+- gRPC: `UpdateOutage`, `UpdateNote`, `UpdateAlert`
+- Service Layer: `UpdateOutage()`, `UpdateNote()`
+
 ## Overview
 
 This document describes how metadata and custom fields are handled during update operations in the Outalator application.
@@ -48,6 +72,108 @@ This means:
   }
 }
 ```
+
+## API Examples
+
+### REST API Example
+
+```bash
+# Initial state
+GET /api/v1/outages/123
+{
+  "id": "123",
+  "title": "API Outage",
+  "metadata": {
+    "region": "us-east-1",
+    "service": "api-gateway",
+    "environment": "production"
+  },
+  "custom_fields": {
+    "runbook_url": "https://wiki.example.com/runbook",
+    "slack_channel": "#incidents"
+  }
+}
+
+# Update with partial metadata (THIS WILL DELETE MISSING KEYS!)
+PUT /api/v1/outages/123
+{
+  "metadata": {
+    "region": "us-west-2"
+  }
+}
+
+# Result - "service" and "environment" are DELETED
+{
+  "id": "123",
+  "title": "API Outage",
+  "metadata": {
+    "region": "us-west-2"
+    // ⚠️ "service" and "environment" keys are GONE
+  },
+  "custom_fields": {
+    "runbook_url": "https://wiki.example.com/runbook",
+    "slack_channel": "#incidents"
+    // ✅ custom_fields unchanged because not in update request
+  }
+}
+```
+
+### gRPC API Example
+
+```protobuf
+// Initial state
+GetOutage("123") returns:
+{
+  id: "123"
+  metadata: {
+    "region": "us-east-1"
+    "service": "api-gateway"
+  }
+}
+
+// Update request
+UpdateOutageRequest {
+  id: "123"
+  metadata: {
+    "region": "us-west-2"
+  }
+}
+
+// Result - "service" key is DELETED
+{
+  id: "123"
+  metadata: {
+    "region": "us-west-2"
+    // ⚠️ "service" key is GONE
+  }
+}
+```
+
+### When Fields Are Not Touched
+
+If you don't include `metadata` or `custom_fields` in your update request, they are **preserved**:
+
+```bash
+# Update only the title
+PUT /api/v1/outages/123
+{
+  "title": "Updated Title"
+}
+
+# Result - metadata and custom_fields are unchanged
+{
+  "id": "123",
+  "title": "Updated Title",
+  "metadata": {
+    "region": "us-east-1",
+    "service": "api-gateway"
+    // ✅ All keys preserved
+  }
+}
+```
+
+**Rule:** If you **omit** `metadata`/`custom_fields` from the update → they are **preserved**
+**Rule:** If you **include** `metadata`/`custom_fields` in the update → they are **fully replaced**
 
 ## Workaround: Client-Side Merge
 

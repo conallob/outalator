@@ -163,8 +163,8 @@ message UpdateOutageRequest {
   optional string description = 3;
   optional string status = 4;
   optional string severity = 5;
-  map<string, string> metadata = 6;  // Updated metadata (merges with existing)
-  google.protobuf.Struct custom_fields = 7;  // Updated custom fields (merges with existing)
+  map<string, string> metadata = 6;  // Updated metadata (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
+  google.protobuf.Struct custom_fields = 7;  // Updated custom fields (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
 }
 
 message UpdateOutageResponse {
@@ -212,8 +212,8 @@ message UpdateNoteRequest {
   string id = 1;
   optional string content = 2;
   optional string format = 3;
-  map<string, string> metadata = 4;  // Updated metadata (merges with existing)
-  google.protobuf.Struct custom_fields = 5;  // Updated custom fields (merges with existing)
+  map<string, string> metadata = 4;  // Updated metadata (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
+  google.protobuf.Struct custom_fields = 5;  // Updated custom fields (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
 }
 
 message UpdateNoteResponse {
@@ -326,8 +326,8 @@ message UpdateAlertRequest {
   optional string severity = 4;
   optional google.protobuf.Timestamp acknowledged_at = 5;
   optional google.protobuf.Timestamp resolved_at = 6;
-  map<string, string> metadata = 7;  // Updated metadata (merges with existing)
-  google.protobuf.Struct custom_fields = 8;  // Updated custom fields (merges with existing)
+  map<string, string> metadata = 7;  // Updated metadata (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
+  google.protobuf.Struct custom_fields = 8;  // Updated custom fields (FULL REPLACEMENT - see docs/UPDATE_BEHAVIOR.md)
 }
 
 message UpdateAlertResponse {

@@ -93,12 +93,18 @@ func (s *Service) CreateOutage(ctx context.Context, req domain.CreateOutageReque
 
 	// Create tags
 	for _, tagReq := range req.Tags {
+		// Validate tag custom fields
+		if err := validation.ValidateCustomFields(tagReq.CustomFields); err != nil {
+			return nil, fmt.Errorf("invalid tag custom_fields: %w", err)
+		}
+
 		tag := &domain.Tag{
-			ID:        uuid.New(),
-			OutageID:  outageID,
-			Key:       tagReq.Key,
-			Value:     tagReq.Value,
-			CreatedAt: now,
+			ID:           uuid.New(),
+			OutageID:     outageID,
+			Key:          tagReq.Key,
+			Value:        tagReq.Value,
+			CreatedAt:    now,
+			CustomFields: tagReq.CustomFields,
 		}
 		if err := s.storage.CreateTag(ctx, tag); err != nil {
 			return nil, fmt.Errorf("failed to create tag: %w", err)
@@ -149,6 +155,20 @@ func (s *Service) UpdateOutage(ctx context.Context, id uuid.UUID, req domain.Upd
 		outage.Severity = *req.Severity
 	}
 
+	// Handle metadata and custom_fields updates (FULL REPLACEMENT)
+	if req.Metadata != nil {
+		if err := validation.ValidateMetadata(req.Metadata); err != nil {
+			return nil, fmt.Errorf("invalid metadata: %w", err)
+		}
+		outage.Metadata = req.Metadata
+	}
+	if req.CustomFields != nil {
+		if err := validation.ValidateCustomFields(req.CustomFields); err != nil {
+			return nil, fmt.Errorf("invalid custom_fields: %w", err)
+		}
+		outage.CustomFields = req.CustomFields
+	}
+
 	outage.UpdatedAt = time.Now()
 
 	if err := s.storage.UpdateOutage(ctx, outage); err != nil {
@@ -165,15 +185,25 @@ func (s *Service) AddNote(ctx context.Context, outageID uuid.UUID, req domain.Ad
 		return nil, err
 	}
 
+	// Validate metadata and custom fields
+	if err := validation.ValidateMetadata(req.Metadata); err != nil {
+		return nil, fmt.Errorf("invalid metadata: %w", err)
+	}
+	if err := validation.ValidateCustomFields(req.CustomFields); err != nil {
+		return nil, fmt.Errorf("invalid custom_fields: %w", err)
+	}
+
 	now := time.Now()
 	note := &domain.Note{
-		ID:        uuid.New(),
-		OutageID:  outageID,
-		Content:   req.Content,
-		Format:    req.Format,
-		Author:    req.Author,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:           uuid.New(),
+		OutageID:     outageID,
+		Content:      req.Content,
+		Format:       req.Format,
+		Author:       req.Author,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+		Metadata:     req.Metadata,
+		CustomFields: req.CustomFields,
 	}
 
 	if err := s.storage.CreateNote(ctx, note); err != nil {
@@ -183,19 +213,68 @@ func (s *Service) AddNote(ctx context.Context, outageID uuid.UUID, req domain.Ad
 	return note, nil
 }
 
+// UpdateNote updates an existing note
+func (s *Service) UpdateNote(ctx context.Context, noteID uuid.UUID, content, format *string, metadata map[string]string, customFields map[string]any) (*domain.Note, error) {
+	// Get existing note
+	note, err := s.storage.GetNote(ctx, noteID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update fields if provided
+	if content != nil {
+		note.Content = *content
+	}
+	if format != nil {
+		note.Format = *format
+	}
+
+	// Handle metadata and custom_fields updates (FULL REPLACEMENT)
+	if metadata != nil {
+		if err := validation.ValidateMetadata(metadata); err != nil {
+			return nil, fmt.Errorf("invalid metadata: %w", err)
+		}
+		note.Metadata = metadata
+	}
+	if customFields != nil {
+		if err := validation.ValidateCustomFields(customFields); err != nil {
+			return nil, fmt.Errorf("invalid custom_fields: %w", err)
+		}
+		note.CustomFields = customFields
+	}
+
+	note.UpdatedAt = time.Now()
+
+	if err := s.storage.UpdateNote(ctx, note); err != nil {
+		return nil, err
+	}
+
+	return note, nil
+}
+
 // AddTag adds a tag to an outage
-func (s *Service) AddTag(ctx context.Context, outageID uuid.UUID, key, value string) (*domain.Tag, error) {
+func (s *Service) AddTag(ctx context.Context, outageID uuid.UUID, key, value string, customFields ...map[string]any) (*domain.Tag, error) {
 	// Verify outage exists
 	if _, err := s.storage.GetOutage(ctx, outageID); err != nil {
 		return nil, err
 	}
 
+	var fields map[string]any
+	if len(customFields) > 0 {
+		fields = customFields[0]
+		// Validate custom fields
+		if err := validation.ValidateCustomFields(fields); err != nil {
+			return nil, fmt.Errorf("invalid custom_fields: %w", err)
+		}
+	}
+
 	tag := &domain.Tag{
-		ID:        uuid.New(),
-		OutageID:  outageID,
-		Key:       key,
-		Value:     value,
-		CreatedAt: time.Now(),
+		ID:           uuid.New(),
+		OutageID:     outageID,
+		Key:          key,
+		Value:        value,
+		CreatedAt:    time.Now(),
+		CustomFields: fields,
 	}
 
 	if err := s.storage.CreateTag(ctx, tag); err != nil {
