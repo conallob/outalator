@@ -8,6 +8,7 @@ import (
 	"github.com/conall/outalator/internal/domain"
 	"github.com/conall/outalator/internal/notification"
 	"github.com/conall/outalator/internal/storage"
+	"github.com/conall/outalator/internal/validation"
 	"github.com/google/uuid"
 )
 
@@ -32,17 +33,27 @@ func (s *Service) RegisterNotificationService(svc notification.Service) {
 
 // CreateOutage creates a new outage with associated alerts
 func (s *Service) CreateOutage(ctx context.Context, req domain.CreateOutageRequest) (*domain.Outage, error) {
+	// Validate metadata and custom fields
+	if err := validation.ValidateMetadata(req.Metadata); err != nil {
+		return nil, fmt.Errorf("invalid metadata: %w", err)
+	}
+	if err := validation.ValidateCustomFields(req.CustomFields); err != nil {
+		return nil, fmt.Errorf("invalid custom_fields: %w", err)
+	}
+
 	now := time.Now()
 	outageID := uuid.New()
 
 	outage := &domain.Outage{
-		ID:          outageID,
-		Title:       req.Title,
-		Description: req.Description,
-		Status:      "open",
-		Severity:    req.Severity,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:           outageID,
+		Title:        req.Title,
+		Description:  req.Description,
+		Status:       "open",
+		Severity:     req.Severity,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+		Metadata:     req.Metadata,
+		CustomFields: req.CustomFields,
 	}
 
 	if err := s.storage.CreateOutage(ctx, outage); err != nil {

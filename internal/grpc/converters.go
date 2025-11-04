@@ -7,11 +7,18 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// Note: This file will contain conversions between domain models and protobuf messages
-// After running protoc, import the generated pb package here
+// Note: This file contains placeholder converter functions for gRPC.
+// These functions will be implemented after running `make proto` to generate the protobuf code.
+//
+// To generate protobuf code:
+//   1. Install protoc: brew install protobuf (macOS) or apt-get install protobuf-compiler (Ubuntu)
+//   2. Install Go plugins: make grpc-deps
+//   3. Generate code: make proto
+//
+// After generation, uncomment and complete the conversion functions in this file.
+// See docs/GRPC_SETUP.md for detailed setup instructions.
 
 // Helper functions for converting between domain models and protobuf messages
-// These will be implemented once the proto files are generated
 
 // convertTimestampToProto converts a time.Time to protobuf timestamp
 func convertTimestampToProto(t time.Time) *timestamppb.Timestamp {
@@ -68,114 +75,13 @@ func stringPtr(s string) *string {
 	return &s
 }
 
-// Example conversion functions (to be completed after proto generation):
-
-/*
-// OutageDomainToProto converts a domain.Outage to pb.Outage
-func OutageDomainToProto(o *domain.Outage) *pb.Outage {
-	if o == nil {
-		return nil
-	}
-
-	pbOutage := &pb.Outage{
-		Id:          o.ID.String(),
-		Title:       o.Title,
-		Description: o.Description,
-		Status:      o.Status,
-		Severity:    o.Severity,
-		CreatedAt:   convertTimestampToProto(o.CreatedAt),
-		UpdatedAt:   convertTimestampToProto(o.UpdatedAt),
-		ResolvedAt:  convertTimestampPtrToProto(o.ResolvedAt),
-	}
-
-	// Convert alerts
-	for _, alert := range o.Alerts {
-		pbOutage.Alerts = append(pbOutage.Alerts, AlertDomainToProto(&alert))
-	}
-
-	// Convert notes
-	for _, note := range o.Notes {
-		pbOutage.Notes = append(pbOutage.Notes, NoteDomainToProto(&note))
-	}
-
-	// Convert tags
-	for _, tag := range o.Tags {
-		pbOutage.Tags = append(pbOutage.Tags, TagDomainToProto(&tag))
-	}
-
-	return pbOutage
-}
-
-// AlertDomainToProto converts a domain.Alert to pb.Alert
-func AlertDomainToProto(a *domain.Alert) *pb.Alert {
-	if a == nil {
-		return nil
-	}
-
-	return &pb.Alert{
-		Id:              a.ID.String(),
-		OutageId:        a.OutageID.String(),
-		ExternalId:      a.ExternalID,
-		Source:          a.Source,
-		TeamName:        a.TeamName,
-		Title:           a.Title,
-		Description:     a.Description,
-		Severity:        a.Severity,
-		TriggeredAt:     convertTimestampToProto(a.TriggeredAt),
-		AcknowledgedAt:  convertTimestampPtrToProto(a.AcknowledgedAt),
-		ResolvedAt:      convertTimestampPtrToProto(a.ResolvedAt),
-		CreatedAt:       convertTimestampToProto(a.CreatedAt),
-	}
-}
-
-// NoteDomainToProto converts a domain.Note to pb.Note
-func NoteDomainToProto(n *domain.Note) *pb.Note {
-	if n == nil {
-		return nil
-	}
-
-	return &pb.Note{
-		Id:        n.ID.String(),
-		OutageId:  n.OutageID.String(),
-		Content:   n.Content,
-		Format:    n.Format,
-		Author:    n.Author,
-		CreatedAt: convertTimestampToProto(n.CreatedAt),
-		UpdatedAt: convertTimestampToProto(n.UpdatedAt),
-	}
-}
-
-// TagDomainToProto converts a domain.Tag to pb.Tag
-func TagDomainToProto(t *domain.Tag) *pb.Tag {
-	if t == nil {
-		return nil
-	}
-
-	return &pb.Tag{
-		Id:        t.ID.String(),
-		OutageId:  t.OutageID.String(),
-		Key:       t.Key,
-		Value:     t.Value,
-		CreatedAt: convertTimestampToProto(t.CreatedAt),
-	}
-}
-
-// CreateOutageRequestProtoToDomain converts pb.CreateOutageRequest to domain.CreateOutageRequest
-func CreateOutageRequestProtoToDomain(req *pb.CreateOutageRequest) domain.CreateOutageRequest {
-	domainReq := domain.CreateOutageRequest{
-		Title:       req.Title,
-		Description: req.Description,
-		Severity:    req.Severity,
-		AlertIDs:    req.AlertIds,
-	}
-
-	for _, tag := range req.Tags {
-		domainReq.Tags = append(domainReq.Tags, domain.TagInput{
-			Key:   tag.Key,
-			Value: tag.Value,
-		})
-	}
-
-	return domainReq
-}
-*/
+// TODO: After running `make proto`, implement the following converter functions:
+// - OutageDomainToProto: Convert domain.Outage to pb.Outage (include metadata and custom_fields)
+// - AlertDomainToProto: Convert domain.Alert to pb.Alert (include source_metadata, metadata, and custom_fields)
+// - NoteDomainToProto: Convert domain.Note to pb.Note (include metadata and custom_fields)
+// - TagDomainToProto: Convert domain.Tag to pb.Tag (include custom_fields)
+// - CreateOutageRequestProtoToDomain: Convert pb.CreateOutageRequest to domain.CreateOutageRequest
+// - And corresponding reverse converters for all domain types
+//
+// Important: Ensure all new fields (metadata, custom_fields, source_metadata) are properly converted
+// between protobuf Struct/map types and Go map[string]string/map[string]any types.

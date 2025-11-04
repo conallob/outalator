@@ -13,15 +13,15 @@ import (
 // CreateAlert creates a new alert in the database
 func (s *PostgresStorage) CreateAlert(ctx context.Context, alert *domain.Alert) error {
 	// Marshal JSON fields
-	sourceMetadataJSON, err := json.Marshal(alert.SourceMetadata)
+	sourceMetadataJSON, err := marshalJSONAny(alert.SourceMetadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal source_metadata: %w", err)
 	}
-	metadataJSON, err := json.Marshal(alert.Metadata)
+	metadataJSON, err := marshalJSONMap(alert.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	customFieldsJSON, err := json.Marshal(alert.CustomFields)
+	customFieldsJSON, err := marshalJSONAny(alert.CustomFields)
 	if err != nil {
 		return fmt.Errorf("failed to marshal custom_fields: %w", err)
 	}
@@ -188,15 +188,15 @@ func (s *PostgresStorage) ListAlertsByOutage(ctx context.Context, outageID uuid.
 // UpdateAlert updates an existing alert
 func (s *PostgresStorage) UpdateAlert(ctx context.Context, alert *domain.Alert) error {
 	// Marshal JSON fields
-	sourceMetadataJSON, err := json.Marshal(alert.SourceMetadata)
+	sourceMetadataJSON, err := marshalJSONAny(alert.SourceMetadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal source_metadata: %w", err)
 	}
-	metadataJSON, err := json.Marshal(alert.Metadata)
+	metadataJSON, err := marshalJSONMap(alert.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	customFieldsJSON, err := json.Marshal(alert.CustomFields)
+	customFieldsJSON, err := marshalJSONAny(alert.CustomFields)
 	if err != nil {
 		return fmt.Errorf("failed to marshal custom_fields: %w", err)
 	}

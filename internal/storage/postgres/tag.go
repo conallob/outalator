@@ -13,7 +13,7 @@ import (
 // CreateTag creates a new tag in the database
 func (s *PostgresStorage) CreateTag(ctx context.Context, tag *domain.Tag) error {
 	// Marshal JSON fields
-	customFieldsJSON, err := json.Marshal(tag.CustomFields)
+	customFieldsJSON, err := marshalJSONAny(tag.CustomFields)
 	if err != nil {
 		return fmt.Errorf("failed to marshal custom_fields: %w", err)
 	}

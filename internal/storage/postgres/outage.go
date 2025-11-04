@@ -13,11 +13,11 @@ import (
 // CreateOutage creates a new outage in the database
 func (s *PostgresStorage) CreateOutage(ctx context.Context, outage *domain.Outage) error {
 	// Marshal metadata and custom_fields to JSON
-	metadataJSON, err := json.Marshal(outage.Metadata)
+	metadataJSON, err := marshalJSONMap(outage.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	customFieldsJSON, err := json.Marshal(outage.CustomFields)
+	customFieldsJSON, err := marshalJSONAny(outage.CustomFields)
 	if err != nil {
 		return fmt.Errorf("failed to marshal custom_fields: %w", err)
 	}
@@ -151,11 +151,11 @@ func (s *PostgresStorage) ListOutages(ctx context.Context, limit, offset int) ([
 // UpdateOutage updates an existing outage
 func (s *PostgresStorage) UpdateOutage(ctx context.Context, outage *domain.Outage) error {
 	// Marshal metadata and custom_fields to JSON
-	metadataJSON, err := json.Marshal(outage.Metadata)
+	metadataJSON, err := marshalJSONMap(outage.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	customFieldsJSON, err := json.Marshal(outage.CustomFields)
+	customFieldsJSON, err := marshalJSONAny(outage.CustomFields)
 	if err != nil {
 		return fmt.Errorf("failed to marshal custom_fields: %w", err)
 	}

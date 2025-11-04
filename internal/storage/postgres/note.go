@@ -13,11 +13,11 @@ import (
 // CreateNote creates a new note in the database
 func (s *PostgresStorage) CreateNote(ctx context.Context, note *domain.Note) error {
 	// Marshal JSON fields
-	metadataJSON, err := json.Marshal(note.Metadata)
+	metadataJSON, err := marshalJSONMap(note.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	customFieldsJSON, err := json.Marshal(note.CustomFields)
+	customFieldsJSON, err := marshalJSONAny(note.CustomFields)
 	if err != nil {
 		return fmt.Errorf("failed to marshal custom_fields: %w", err)
 	}
@@ -121,11 +121,11 @@ func (s *PostgresStorage) ListNotesByOutage(ctx context.Context, outageID uuid.U
 // UpdateNote updates an existing note
 func (s *PostgresStorage) UpdateNote(ctx context.Context, note *domain.Note) error {
 	// Marshal JSON fields
-	metadataJSON, err := json.Marshal(note.Metadata)
+	metadataJSON, err := marshalJSONMap(note.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	customFieldsJSON, err := json.Marshal(note.CustomFields)
+	customFieldsJSON, err := marshalJSONAny(note.CustomFields)
 	if err != nil {
 		return fmt.Errorf("failed to marshal custom_fields: %w", err)
 	}
