@@ -3,7 +3,6 @@ package grpc
 import (
 	"time"
 
-	"github.com/conall/outalator/internal/domain"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

@@ -1,8 +1,6 @@
 package grpc
 
 import (
-	"context"
-
 	"github.com/conall/outalator/internal/service"
 	"google.golang.org/grpc"
 )

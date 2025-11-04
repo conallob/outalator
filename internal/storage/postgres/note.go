@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/conall/outalator/internal/domain"
@@ -11,13 +12,24 @@ import (
 
 // CreateNote creates a new note in the database
 func (s *PostgresStorage) CreateNote(ctx context.Context, note *domain.Note) error {
+	// Marshal JSON fields
+	metadataJSON, err := json.Marshal(note.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+	customFieldsJSON, err := json.Marshal(note.CustomFields)
+	if err != nil {
+		return fmt.Errorf("failed to marshal custom_fields: %w", err)
+	}
+
 	query := `
-		INSERT INTO notes (id, outage_id, content, format, author, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO notes (id, outage_id, content, format, author, created_at, updated_at, metadata, custom_fields)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
-	_, err := s.db.ExecContext(ctx, query,
+	_, err = s.db.ExecContext(ctx, query,
 		note.ID, note.OutageID, note.Content, note.Format,
 		note.Author, note.CreatedAt, note.UpdatedAt,
+		metadataJSON, customFieldsJSON,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create note: %w", err)
@@ -28,14 +40,16 @@ func (s *PostgresStorage) CreateNote(ctx context.Context, note *domain.Note) err
 // GetNote retrieves a note by ID
 func (s *PostgresStorage) GetNote(ctx context.Context, id uuid.UUID) (*domain.Note, error) {
 	query := `
-		SELECT id, outage_id, content, format, author, created_at, updated_at
+		SELECT id, outage_id, content, format, author, created_at, updated_at, metadata, custom_fields
 		FROM notes
 		WHERE id = $1
 	`
 	note := &domain.Note{}
+	var metadataJSON, customFieldsJSON []byte
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&note.ID, &note.OutageID, &note.Content, &note.Format,
 		&note.Author, &note.CreatedAt, &note.UpdatedAt,
+		&metadataJSON, &customFieldsJSON,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("note not found")
@@ -43,13 +57,26 @@ func (s *PostgresStorage) GetNote(ctx context.Context, id uuid.UUID) (*domain.No
 	if err != nil {
 		return nil, fmt.Errorf("failed to get note: %w", err)
 	}
+
+	// Unmarshal JSON fields
+	if len(metadataJSON) > 0 {
+		if err := json.Unmarshal(metadataJSON, &note.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+	}
+	if len(customFieldsJSON) > 0 {
+		if err := json.Unmarshal(customFieldsJSON, &note.CustomFields); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", err)
+		}
+	}
+
 	return note, nil
 }
 
 // ListNotesByOutage retrieves all notes for a specific outage
 func (s *PostgresStorage) ListNotesByOutage(ctx context.Context, outageID uuid.UUID) ([]*domain.Note, error) {
 	query := `
-		SELECT id, outage_id, content, format, author, created_at, updated_at
+		SELECT id, outage_id, content, format, author, created_at, updated_at, metadata, custom_fields
 		FROM notes
 		WHERE outage_id = $1
 		ORDER BY created_at DESC
@@ -63,13 +90,28 @@ func (s *PostgresStorage) ListNotesByOutage(ctx context.Context, outageID uuid.U
 	var notes []*domain.Note
 	for rows.Next() {
 		note := &domain.Note{}
+		var metadataJSON, customFieldsJSON []byte
 		err := rows.Scan(
 			&note.ID, &note.OutageID, &note.Content, &note.Format,
 			&note.Author, &note.CreatedAt, &note.UpdatedAt,
+			&metadataJSON, &customFieldsJSON,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan note: %w", err)
 		}
+
+		// Unmarshal JSON fields
+		if len(metadataJSON) > 0 {
+			if err := json.Unmarshal(metadataJSON, &note.Metadata); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+			}
+		}
+		if len(customFieldsJSON) > 0 {
+			if err := json.Unmarshal(customFieldsJSON, &note.CustomFields); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", err)
+			}
+		}
+
 		notes = append(notes, note)
 	}
 
@@ -78,13 +120,24 @@ func (s *PostgresStorage) ListNotesByOutage(ctx context.Context, outageID uuid.U
 
 // UpdateNote updates an existing note
 func (s *PostgresStorage) UpdateNote(ctx context.Context, note *domain.Note) error {
+	// Marshal JSON fields
+	metadataJSON, err := json.Marshal(note.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+	customFieldsJSON, err := json.Marshal(note.CustomFields)
+	if err != nil {
+		return fmt.Errorf("failed to marshal custom_fields: %w", err)
+	}
+
 	query := `
 		UPDATE notes
-		SET content = $2, format = $3, updated_at = $4
+		SET content = $2, format = $3, updated_at = $4, metadata = $5, custom_fields = $6
 		WHERE id = $1
 	`
 	result, err := s.db.ExecContext(ctx, query,
 		note.ID, note.Content, note.Format, note.UpdatedAt,
+		metadataJSON, customFieldsJSON,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update note: %w", err)
