@@ -7,6 +7,8 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
+
+	"github.com/conall/outalator/internal/config"
 )
 
 // PostgresStorage implements the Storage interface using PostgreSQL
@@ -22,6 +24,18 @@ type Config struct {
 	Password string
 	DBName   string
 	SSLMode  string
+}
+
+// NewStorage creates a PostgresStorage from an application DatabaseConfig.
+func NewStorage(cfg config.DatabaseConfig) (*PostgresStorage, error) {
+	return New(Config{
+		Host:     cfg.Host,
+		Port:     cfg.Port,
+		User:     cfg.User,
+		Password: cfg.Password,
+		DBName:   cfg.DBName,
+		SSLMode:  cfg.SSLMode,
+	})
 }
 
 // New creates a new PostgreSQL storage instance
