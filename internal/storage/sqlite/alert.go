@@ -12,6 +12,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// Note: DeleteAlert is not part of the storage.AlertStorage interface and is
+// therefore not implemented here (consistent with the postgres backend).
+
 // CreateAlert creates a new alert in the database.
 func (s *SQLiteStorage) CreateAlert(ctx context.Context, alert *domain.Alert) error {
 	sourceMetadataJSON, err := marshalJSONAny(alert.SourceMetadata)
@@ -54,7 +57,12 @@ func (s *SQLiteStorage) GetAlert(ctx context.Context, id uuid.UUID) (*domain.Ale
 		FROM alerts
 		WHERE id = ?
 	`
-	return s.scanAlert(s.db.QueryRowContext(ctx, query, id.String()))
+	row := s.db.QueryRowContext(ctx, query, id.String())
+	alert, err := scanAlertRow(row.Scan)
+	if err == domain.ErrNotFound {
+		return nil, fmt.Errorf("alert %s: %w", id, domain.ErrNotFound)
+	}
+	return alert, err
 }
 
 // GetAlertByExternalID retrieves an alert by its external ID and source.
@@ -66,7 +74,12 @@ func (s *SQLiteStorage) GetAlertByExternalID(ctx context.Context, externalID, so
 		FROM alerts
 		WHERE external_id = ? AND source = ?
 	`
-	return s.scanAlert(s.db.QueryRowContext(ctx, query, externalID, source))
+	row := s.db.QueryRowContext(ctx, query, externalID, source)
+	alert, err := scanAlertRow(row.Scan)
+	if err == domain.ErrNotFound {
+		return nil, fmt.Errorf("alert external_id=%s source=%s: %w", externalID, source, domain.ErrNotFound)
+	}
+	return alert, err
 }
 
 // ListAlertsByOutage retrieves all alerts for a specific outage.
@@ -87,11 +100,14 @@ func (s *SQLiteStorage) ListAlertsByOutage(ctx context.Context, outageID uuid.UU
 
 	var alerts []*domain.Alert
 	for rows.Next() {
-		alert, err := s.scanAlertRow(rows)
+		alert, err := scanAlertRow(rows.Scan)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan alert: %w", err)
 		}
 		alerts = append(alerts, alert)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating alerts: %w", err)
 	}
 	return alerts, nil
 }
@@ -134,70 +150,41 @@ func (s *SQLiteStorage) UpdateAlert(ctx context.Context, alert *domain.Alert) er
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if n == 0 {
-		return fmt.Errorf("alert not found")
+		return fmt.Errorf("alert %s: %w", alert.ID, domain.ErrNotFound)
 	}
 	return nil
 }
 
-// scanAlert reads one alert row from a QueryRow result.
-func (s *SQLiteStorage) scanAlert(row *sql.Row) (*domain.Alert, error) {
+// scanFunc is the common signature for both (*sql.Row).Scan and (*sql.Rows).Scan.
+type scanFunc func(dest ...any) error
+
+// scanAlertRow populates an Alert from a single row using the provided scan
+// function. Returns domain.ErrNotFound when the underlying error is
+// sql.ErrNoRows.
+func scanAlertRow(scan scanFunc) (*domain.Alert, error) {
 	alert := &domain.Alert{}
 	var idStr, outageIDStr, sourceMetadataJSON, metadataJSON, customFieldsJSON string
-	err := row.Scan(
+	err := scan(
 		&idStr, &outageIDStr, &alert.ExternalID, &alert.Source, &alert.TeamName,
 		&alert.Title, &alert.Description, &alert.Severity, &alert.TriggeredAt,
 		&alert.AcknowledgedAt, &alert.ResolvedAt, &alert.CreatedAt,
 		&sourceMetadataJSON, &metadataJSON, &customFieldsJSON,
 	)
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("alert not found")
+		return nil, domain.ErrNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to get alert: %w", err)
+		return nil, fmt.Errorf("failed to scan alert: %w", err)
 	}
 
-	alert.ID, err = uuid.Parse(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse alert id: %w", err)
+	var parseErr error
+	alert.ID, parseErr = uuid.Parse(idStr)
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse alert id: %w", parseErr)
 	}
-	alert.OutageID, err = uuid.Parse(outageIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse outage id: %w", err)
-	}
-
-	if err := json.Unmarshal([]byte(sourceMetadataJSON), &alert.SourceMetadata); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal source_metadata: %w", err)
-	}
-	if err := json.Unmarshal([]byte(metadataJSON), &alert.Metadata); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
-	}
-	if err := json.Unmarshal([]byte(customFieldsJSON), &alert.CustomFields); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", err)
-	}
-	return alert, nil
-}
-
-// scanAlertRow reads one alert row from a *sql.Rows cursor.
-func (s *SQLiteStorage) scanAlertRow(rows *sql.Rows) (*domain.Alert, error) {
-	alert := &domain.Alert{}
-	var idStr, outageIDStr, sourceMetadataJSON, metadataJSON, customFieldsJSON string
-	var err error
-	if err = rows.Scan(
-		&idStr, &outageIDStr, &alert.ExternalID, &alert.Source, &alert.TeamName,
-		&alert.Title, &alert.Description, &alert.Severity, &alert.TriggeredAt,
-		&alert.AcknowledgedAt, &alert.ResolvedAt, &alert.CreatedAt,
-		&sourceMetadataJSON, &metadataJSON, &customFieldsJSON,
-	); err != nil {
-		return nil, err
-	}
-
-	alert.ID, err = uuid.Parse(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse alert id: %w", err)
-	}
-	alert.OutageID, err = uuid.Parse(outageIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse outage id: %w", err)
+	alert.OutageID, parseErr = uuid.Parse(outageIDStr)
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse outage id: %w", parseErr)
 	}
 
 	if err := json.Unmarshal([]byte(sourceMetadataJSON), &alert.SourceMetadata); err != nil {

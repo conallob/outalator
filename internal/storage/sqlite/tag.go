@@ -47,19 +47,20 @@ func (s *SQLiteStorage) GetTag(ctx context.Context, id uuid.UUID) (*domain.Tag, 
 		&customFieldsJSON,
 	)
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("tag not found")
+		return nil, fmt.Errorf("tag %s: %w", id, domain.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tag: %w", err)
 	}
 
-	tag.ID, err = uuid.Parse(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse tag id: %w", err)
+	var parseErr error
+	tag.ID, parseErr = uuid.Parse(idStr)
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse tag id: %w", parseErr)
 	}
-	tag.OutageID, err = uuid.Parse(outageIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse outage id: %w", err)
+	tag.OutageID, parseErr = uuid.Parse(outageIDStr)
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse outage id: %w", parseErr)
 	}
 
 	if err := json.Unmarshal([]byte(customFieldsJSON), &tag.CustomFields); err != nil {
@@ -86,28 +87,33 @@ func (s *SQLiteStorage) ListTagsByOutage(ctx context.Context, outageID uuid.UUID
 	for rows.Next() {
 		tag := &domain.Tag{}
 		var idStr, outageIDStr, customFieldsJSON string
-		if err := rows.Scan(
+		if scanErr := rows.Scan(
 			&idStr, &outageIDStr, &tag.Key, &tag.Value, &tag.CreatedAt,
 			&customFieldsJSON,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan tag: %w", err)
+		); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan tag: %w", scanErr)
 		}
 
-		tag.ID, err = uuid.Parse(idStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse tag id: %w", err)
+		var parseErr error
+		tag.ID, parseErr = uuid.Parse(idStr)
+		if parseErr != nil {
+			return nil, fmt.Errorf("failed to parse tag id: %w", parseErr)
 		}
-		tag.OutageID, err = uuid.Parse(outageIDStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse outage id: %w", err)
+		tag.OutageID, parseErr = uuid.Parse(outageIDStr)
+		if parseErr != nil {
+			return nil, fmt.Errorf("failed to parse outage id: %w", parseErr)
 		}
 
-		if err := json.Unmarshal([]byte(customFieldsJSON), &tag.CustomFields); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", err)
+		if parseErr = json.Unmarshal([]byte(customFieldsJSON), &tag.CustomFields); parseErr != nil {
+			return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", parseErr)
 		}
 
 		tags = append(tags, tag)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating tags: %w", err)
+	}
+
 	return tags, nil
 }
 
@@ -123,12 +129,14 @@ func (s *SQLiteStorage) DeleteTag(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if n == 0 {
-		return fmt.Errorf("tag not found")
+		return fmt.Errorf("tag %s: %w", id, domain.ErrNotFound)
 	}
 	return nil
 }
 
 // FindOutagesByTag finds outages that have a specific tag key-value pair.
+// Returned outages contain only core fields; related data is not eagerly
+// loaded. Call GetOutage for a fully-populated record.
 func (s *SQLiteStorage) FindOutagesByTag(ctx context.Context, key, value string) ([]*domain.Outage, error) {
 	query := `
 		SELECT DISTINCT o.id, o.title, o.description, o.status, o.severity,
@@ -146,29 +154,15 @@ func (s *SQLiteStorage) FindOutagesByTag(ctx context.Context, key, value string)
 
 	var outages []*domain.Outage
 	for rows.Next() {
-		outage := &domain.Outage{}
-		var idStr, metadataJSON, customFieldsJSON string
-		if err := rows.Scan(
-			&idStr, &outage.Title, &outage.Description, &outage.Status,
-			&outage.Severity, &outage.CreatedAt, &outage.UpdatedAt, &outage.ResolvedAt,
-			&metadataJSON, &customFieldsJSON,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan outage: %w", err)
+		outage, parseErr := scanOutageRow(rows.Scan)
+		if parseErr != nil {
+			return nil, fmt.Errorf("failed to scan outage: %w", parseErr)
 		}
-
-		outage.ID, err = uuid.Parse(idStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse outage id: %w", err)
-		}
-
-		if err := json.Unmarshal([]byte(metadataJSON), &outage.Metadata); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
-		}
-		if err := json.Unmarshal([]byte(customFieldsJSON), &outage.CustomFields); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", err)
-		}
-
 		outages = append(outages, outage)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating outages: %w", err)
+	}
+
 	return outages, nil
 }
