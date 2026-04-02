@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/conall/outalator/internal/domain"
@@ -52,7 +53,7 @@ func (s *SQLiteStorage) GetOutage(ctx context.Context, id uuid.UUID) (*domain.Ou
 		&outage.Severity, &outage.CreatedAt, &outage.UpdatedAt, &outage.ResolvedAt,
 		&metadataJSON, &customFieldsJSON,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("outage %s: %w", id, domain.ErrNotFound)
 	}
 	if err != nil {
@@ -71,6 +72,9 @@ func (s *SQLiteStorage) GetOutage(ctx context.Context, id uuid.UUID) (*domain.Ou
 		return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", err)
 	}
 
+	// Eagerly load related data with three additional queries (N+1 by design,
+	// consistent with the postgres backend). Use ListOutages for lightweight
+	// pagination; call GetOutage only when the full record is needed.
 	alerts, err := s.ListAlertsByOutage(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load alerts: %w", err)

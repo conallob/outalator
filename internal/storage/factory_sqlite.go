@@ -14,11 +14,11 @@ import (
 // "postgres" is the production backend; "sqlite" is for local testing.
 func New(cfg config.DatabaseConfig) (Storage, error) {
 	switch cfg.Driver {
-	case "sqlite":
+	case DriverSQLite:
 		return sqlite.NewStorage(cfg)
-	case "postgres", "":
+	case DriverPostgres, "":
 		return postgres.NewStorage(cfg)
 	default:
-		return nil, fmt.Errorf("unknown storage driver %q; supported: postgres, sqlite", cfg.Driver)
+		return nil, fmt.Errorf("unknown storage driver %q; supported: %s, %s", cfg.Driver, DriverPostgres, DriverSQLite)
 	}
 }

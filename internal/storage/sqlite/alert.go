@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/conall/outalator/internal/domain"
@@ -59,7 +60,7 @@ func (s *SQLiteStorage) GetAlert(ctx context.Context, id uuid.UUID) (*domain.Ale
 	`
 	row := s.db.QueryRowContext(ctx, query, id.String())
 	alert, err := scanAlertRow(row.Scan)
-	if err == domain.ErrNotFound {
+	if errors.Is(err, domain.ErrNotFound) {
 		return nil, fmt.Errorf("alert %s: %w", id, domain.ErrNotFound)
 	}
 	return alert, err
@@ -76,7 +77,7 @@ func (s *SQLiteStorage) GetAlertByExternalID(ctx context.Context, externalID, so
 	`
 	row := s.db.QueryRowContext(ctx, query, externalID, source)
 	alert, err := scanAlertRow(row.Scan)
-	if err == domain.ErrNotFound {
+	if errors.Is(err, domain.ErrNotFound) {
 		return nil, fmt.Errorf("alert external_id=%s source=%s: %w", externalID, source, domain.ErrNotFound)
 	}
 	return alert, err
@@ -170,7 +171,7 @@ func scanAlertRow(scan scanFunc) (*domain.Alert, error) {
 		&alert.AcknowledgedAt, &alert.ResolvedAt, &alert.CreatedAt,
 		&sourceMetadataJSON, &metadataJSON, &customFieldsJSON,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, domain.ErrNotFound
 	}
 	if err != nil {

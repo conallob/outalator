@@ -70,13 +70,20 @@ func New(path string) (*SQLiteStorage, error) {
 // new pool connection has foreign-key enforcement enabled.
 func buildDSN(path string) string {
 	pragma := "_pragma=foreign_keys(ON)"
+	if path == ":memory:" {
+		// Use mode=memory&cache=shared so that all pool connections share the
+		// same in-memory database. Without cache=shared each new connection
+		// gets its own isolated empty DB — safe with MaxOpenConns(1) today,
+		// but fragile if the cap is ever removed.
+		return "file::memory:?mode=memory&cache=shared&" + pragma
+	}
 	if strings.HasPrefix(path, "file:") {
 		if strings.Contains(path, "?") {
 			return path + "&" + pragma
 		}
 		return path + "?" + pragma
 	}
-	// Bare path (including ":memory:") — convert to SQLite file URI.
+	// Bare file path — convert to SQLite file URI.
 	return "file:" + path + "?" + pragma
 }
 
@@ -99,15 +106,21 @@ func marshalJSONMap(m map[string]string) ([]byte, error) {
 	return json.Marshal(m)
 }
 
-// marshalJSONAny safely marshals any value, returning {} for nil or typed-nil
-// values (e.g. map[string]any(nil), *T(nil)).
+// marshalJSONAny safely marshals any value with sensible nil handling:
+//   - untyped nil            → {}
+//   - typed-nil map/ptr/etc. → {}
+//   - typed-nil slice        → []  (avoids storing {} which can't deserialise back into a slice)
 func marshalJSONAny(v any) ([]byte, error) {
 	if v == nil {
 		return []byte("{}"), nil
 	}
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
-	case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func, reflect.Interface:
+	case reflect.Slice:
+		if rv.IsNil() {
+			return []byte("[]"), nil
+		}
+	case reflect.Ptr, reflect.Map, reflect.Chan, reflect.Func, reflect.Interface:
 		if rv.IsNil() {
 			return []byte("{}"), nil
 		}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/conall/outalator/internal/domain"
@@ -40,33 +41,11 @@ func (s *SQLiteStorage) GetTag(ctx context.Context, id uuid.UUID) (*domain.Tag, 
 		FROM tags
 		WHERE id = ?
 	`
-	tag := &domain.Tag{}
-	var idStr, outageIDStr, customFieldsJSON string
-	err := s.db.QueryRowContext(ctx, query, id.String()).Scan(
-		&idStr, &outageIDStr, &tag.Key, &tag.Value, &tag.CreatedAt,
-		&customFieldsJSON,
-	)
-	if err == sql.ErrNoRows {
+	tag, err := scanTagRow(s.db.QueryRowContext(ctx, query, id.String()).Scan)
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("tag %s: %w", id, domain.ErrNotFound)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get tag: %w", err)
-	}
-
-	var parseErr error
-	tag.ID, parseErr = uuid.Parse(idStr)
-	if parseErr != nil {
-		return nil, fmt.Errorf("failed to parse tag id: %w", parseErr)
-	}
-	tag.OutageID, parseErr = uuid.Parse(outageIDStr)
-	if parseErr != nil {
-		return nil, fmt.Errorf("failed to parse outage id: %w", parseErr)
-	}
-
-	if err := json.Unmarshal([]byte(customFieldsJSON), &tag.CustomFields); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", err)
-	}
-	return tag, nil
+	return tag, err
 }
 
 // ListTagsByOutage retrieves all tags for a specific outage.
@@ -85,29 +64,10 @@ func (s *SQLiteStorage) ListTagsByOutage(ctx context.Context, outageID uuid.UUID
 
 	var tags []*domain.Tag
 	for rows.Next() {
-		tag := &domain.Tag{}
-		var idStr, outageIDStr, customFieldsJSON string
-		if scanErr := rows.Scan(
-			&idStr, &outageIDStr, &tag.Key, &tag.Value, &tag.CreatedAt,
-			&customFieldsJSON,
-		); scanErr != nil {
-			return nil, fmt.Errorf("failed to scan tag: %w", scanErr)
-		}
-
-		var parseErr error
-		tag.ID, parseErr = uuid.Parse(idStr)
+		tag, parseErr := scanTagRow(rows.Scan)
 		if parseErr != nil {
-			return nil, fmt.Errorf("failed to parse tag id: %w", parseErr)
+			return nil, fmt.Errorf("failed to scan tag: %w", parseErr)
 		}
-		tag.OutageID, parseErr = uuid.Parse(outageIDStr)
-		if parseErr != nil {
-			return nil, fmt.Errorf("failed to parse outage id: %w", parseErr)
-		}
-
-		if parseErr = json.Unmarshal([]byte(customFieldsJSON), &tag.CustomFields); parseErr != nil {
-			return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", parseErr)
-		}
-
 		tags = append(tags, tag)
 	}
 	if err := rows.Err(); err != nil {
@@ -165,4 +125,31 @@ func (s *SQLiteStorage) FindOutagesByTag(ctx context.Context, key, value string)
 	}
 
 	return outages, nil
+}
+
+// scanTagRow populates a Tag from a single row using the provided scan
+// function. Returns sql.ErrNoRows when no row is found.
+func scanTagRow(scan scanFunc) (*domain.Tag, error) {
+	tag := &domain.Tag{}
+	var idStr, outageIDStr, customFieldsJSON string
+	if err := scan(
+		&idStr, &outageIDStr, &tag.Key, &tag.Value, &tag.CreatedAt,
+		&customFieldsJSON,
+	); err != nil {
+		return nil, err
+	}
+
+	var parseErr error
+	tag.ID, parseErr = uuid.Parse(idStr)
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse tag id: %w", parseErr)
+	}
+	tag.OutageID, parseErr = uuid.Parse(outageIDStr)
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse outage id: %w", parseErr)
+	}
+	if parseErr = json.Unmarshal([]byte(customFieldsJSON), &tag.CustomFields); parseErr != nil {
+		return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", parseErr)
+	}
+	return tag, nil
 }

@@ -14,13 +14,13 @@ import (
 // enable "sqlite".
 func New(cfg config.DatabaseConfig) (Storage, error) {
 	switch cfg.Driver {
-	case "sqlite":
+	case DriverSQLite:
 		return nil, fmt.Errorf(
 			"sqlite support is not compiled in; rebuild with: go build -tags sqlite",
 		)
-	case "postgres", "":
+	case DriverPostgres, "":
 		return postgres.NewStorage(cfg)
 	default:
-		return nil, fmt.Errorf("unknown storage driver %q; supported: postgres, sqlite", cfg.Driver)
+		return nil, fmt.Errorf("unknown storage driver %q; supported: %s, %s", cfg.Driver, DriverPostgres, DriverSQLite)
 	}
 }

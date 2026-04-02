@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/conall/outalator/internal/domain"
@@ -45,37 +46,11 @@ func (s *SQLiteStorage) GetNote(ctx context.Context, id uuid.UUID) (*domain.Note
 		FROM notes
 		WHERE id = ?
 	`
-	note := &domain.Note{}
-	var idStr, outageIDStr, metadataJSON, customFieldsJSON string
-	err := s.db.QueryRowContext(ctx, query, id.String()).Scan(
-		&idStr, &outageIDStr, &note.Content, &note.Format,
-		&note.Author, &note.CreatedAt, &note.UpdatedAt,
-		&metadataJSON, &customFieldsJSON,
-	)
-	if err == sql.ErrNoRows {
+	note, err := scanNoteRow(s.db.QueryRowContext(ctx, query, id.String()).Scan)
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("note %s: %w", id, domain.ErrNotFound)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get note: %w", err)
-	}
-
-	var parseErr error
-	note.ID, parseErr = uuid.Parse(idStr)
-	if parseErr != nil {
-		return nil, fmt.Errorf("failed to parse note id: %w", parseErr)
-	}
-	note.OutageID, parseErr = uuid.Parse(outageIDStr)
-	if parseErr != nil {
-		return nil, fmt.Errorf("failed to parse outage id: %w", parseErr)
-	}
-
-	if err := json.Unmarshal([]byte(metadataJSON), &note.Metadata); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
-	}
-	if err := json.Unmarshal([]byte(customFieldsJSON), &note.CustomFields); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", err)
-	}
-	return note, nil
+	return note, err
 }
 
 // ListNotesByOutage retrieves all notes for a specific outage.
@@ -94,33 +69,10 @@ func (s *SQLiteStorage) ListNotesByOutage(ctx context.Context, outageID uuid.UUI
 
 	var notes []*domain.Note
 	for rows.Next() {
-		note := &domain.Note{}
-		var idStr, outageIDStr, metadataJSON, customFieldsJSON string
-		if scanErr := rows.Scan(
-			&idStr, &outageIDStr, &note.Content, &note.Format,
-			&note.Author, &note.CreatedAt, &note.UpdatedAt,
-			&metadataJSON, &customFieldsJSON,
-		); scanErr != nil {
-			return nil, fmt.Errorf("failed to scan note: %w", scanErr)
-		}
-
-		var parseErr error
-		note.ID, parseErr = uuid.Parse(idStr)
+		note, parseErr := scanNoteRow(rows.Scan)
 		if parseErr != nil {
-			return nil, fmt.Errorf("failed to parse note id: %w", parseErr)
+			return nil, fmt.Errorf("failed to scan note: %w", parseErr)
 		}
-		note.OutageID, parseErr = uuid.Parse(outageIDStr)
-		if parseErr != nil {
-			return nil, fmt.Errorf("failed to parse outage id: %w", parseErr)
-		}
-
-		if parseErr = json.Unmarshal([]byte(metadataJSON), &note.Metadata); parseErr != nil {
-			return nil, fmt.Errorf("failed to unmarshal metadata: %w", parseErr)
-		}
-		if parseErr = json.Unmarshal([]byte(customFieldsJSON), &note.CustomFields); parseErr != nil {
-			return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", parseErr)
-		}
-
 		notes = append(notes, note)
 	}
 	if err := rows.Err(); err != nil {
@@ -130,7 +82,9 @@ func (s *SQLiteStorage) ListNotesByOutage(ctx context.Context, outageID uuid.UUI
 	return notes, nil
 }
 
-// UpdateNote updates an existing note.
+// UpdateNote updates the content, format, metadata, and custom_fields of an
+// existing note. Author is intentionally not updated — notes are immutable
+// with respect to their author after creation.
 func (s *SQLiteStorage) UpdateNote(ctx context.Context, note *domain.Note) error {
 	metadataJSON, err := marshalJSONMap(note.Metadata)
 	if err != nil {
@@ -180,4 +134,35 @@ func (s *SQLiteStorage) DeleteNote(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("note %s: %w", id, domain.ErrNotFound)
 	}
 	return nil
+}
+
+// scanNoteRow populates a Note from a single row using the provided scan
+// function. Returns sql.ErrNoRows when no row is found.
+func scanNoteRow(scan scanFunc) (*domain.Note, error) {
+	note := &domain.Note{}
+	var idStr, outageIDStr, metadataJSON, customFieldsJSON string
+	if err := scan(
+		&idStr, &outageIDStr, &note.Content, &note.Format,
+		&note.Author, &note.CreatedAt, &note.UpdatedAt,
+		&metadataJSON, &customFieldsJSON,
+	); err != nil {
+		return nil, err
+	}
+
+	var parseErr error
+	note.ID, parseErr = uuid.Parse(idStr)
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse note id: %w", parseErr)
+	}
+	note.OutageID, parseErr = uuid.Parse(outageIDStr)
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse outage id: %w", parseErr)
+	}
+	if parseErr = json.Unmarshal([]byte(metadataJSON), &note.Metadata); parseErr != nil {
+		return nil, fmt.Errorf("failed to unmarshal metadata: %w", parseErr)
+	}
+	if parseErr = json.Unmarshal([]byte(customFieldsJSON), &note.CustomFields); parseErr != nil {
+		return nil, fmt.Errorf("failed to unmarshal custom_fields: %w", parseErr)
+	}
+	return note, nil
 }
