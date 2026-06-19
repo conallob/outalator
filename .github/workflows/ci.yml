@@ -19,10 +19,12 @@ jobs:
           cache: true
 
       - name: Run tests
-        # Exclude internal/grpc: it imports generated proto code that is not
-        # committed to the repo. Run `make proto` locally to generate it first.
+        # Exclude packages that depend on generated proto code (not committed).
+        # - internal/grpc: directly imports the generated package
+        # - cmd/outalator: imports internal/grpc, so it fails transitively
+        # Run `make proto` locally to generate the code and test these packages.
         run: |
-          PKGS=$(go list ./... 2>/dev/null | grep -v '/grpc' | grep -v '/api/proto')
+          PKGS=$(go list ./... 2>/dev/null | grep -v '/grpc' | grep -v '/api/proto' | grep -v 'cmd/outalator')
           go test -v -race -coverprofile=coverage.out -covermode=atomic $PKGS
 
       - name: Upload coverage to Codecov
@@ -70,7 +72,7 @@ jobs:
 
       - name: go vet
         run: |
-          PKGS=$(go list ./... 2>/dev/null | grep -v '/grpc' | grep -v '/api/proto')
+          PKGS=$(go list ./... 2>/dev/null | grep -v '/grpc' | grep -v '/api/proto' | grep -v 'cmd/outalator')
           go vet $PKGS
 
       - name: go vet (SQLite)
