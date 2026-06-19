@@ -7,7 +7,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Storage defines the interface for data persistence
+// Storage defines the interface for data persistence.
+// Implementations may normalise nil map fields (e.g. Metadata, CustomFields)
+// to empty non-nil maps on round-trip. Callers should use len(m) == 0 rather
+// than m == nil to test for an absent map after reading from storage.
 type Storage interface {
 	OutageStorage
 	AlertStorage
@@ -43,7 +46,9 @@ type NoteStorage interface {
 	DeleteNote(ctx context.Context, id uuid.UUID) error
 }
 
-// TagStorage defines methods for tag persistence
+// TagStorage defines methods for tag persistence.
+// Tags are intentionally immutable after creation: there is no UpdateTag.
+// To change a tag's key or value, delete the old tag and create a new one.
 type TagStorage interface {
 	CreateTag(ctx context.Context, tag *domain.Tag) error
 	GetTag(ctx context.Context, id uuid.UUID) (*domain.Tag, error)

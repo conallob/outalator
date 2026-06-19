@@ -11,7 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The project has been implemented with a complete backend infrastructure:
 - RESTful API server built with Go
 - gRPC API server (protobuf definitions ready, implementation pending proto generation)
-- PostgreSQL database with migration scripts
+- PostgreSQL database with migration scripts (production)
+- SQLite database for local testing (build with `-tags sqlite`)
 - Support for PagerDuty and OpsGenie integrations
 - Modular architecture for easy extension
 
@@ -33,6 +34,35 @@ The project has been implemented with a complete backend infrastructure:
 5. Build and run the application: `go run cmd/outalator/main.go`
 6. Access REST API at `http://localhost:8080`
 7. (Optional) Access gRPC API at `localhost:9090` if enabled
+
+### SQLite local testing
+
+The SQLite backend requires the `modernc.org/sqlite` module and must be opted into at build time:
+
+```bash
+# Run SQLite storage tests
+make test-sqlite
+
+# Build with SQLite support enabled
+go build -tags sqlite ./...
+
+# Use SQLite backend at runtime (set driver in config or env)
+DB_DRIVER=sqlite DB_PATH=outalator.db ./outalator
+```
+
+The SQLite schema is embedded in `internal/storage/sqlite/schema.sql` and applied automatically on first open. It is intentionally maintained separately from the Postgres migration files.
+
+**Important — Go module maintenance:**
+
+Adding `modernc.org/sqlite` requires Go 1.25.0 (the module's minimum). The `go` directive in `go.mod` reflects this for the entire module; environments on Go 1.23/1.24 will need to upgrade.
+
+Because `modernc.org/sqlite` is only imported from files with `//go:build sqlite`, a plain `go mod tidy` (without the build tag) will **remove** it from `go.mod`. Always use the tagged tidy when updating dependencies:
+
+```bash
+make tidy-sqlite   # equivalent to: GOFLAGS="-tags=sqlite" go mod tidy
+```
+
+The entries remain marked `// indirect` in `go.mod` even though they are direct imports — this is a known Go tooling limitation when dependencies are gated behind custom build tags.
 
 ## Architecture
 

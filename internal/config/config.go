@@ -33,12 +33,18 @@ type GRPCConfig struct {
 
 // DatabaseConfig holds database configuration
 type DatabaseConfig struct {
+	// Driver selects the storage backend: "postgres" (default) or "sqlite".
+	// SQLite support requires building with -tags sqlite.
+	Driver   string `yaml:"driver"`
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 	DBName   string `yaml:"dbname"`
 	SSLMode  string `yaml:"sslmode"`
+	// Path is the file path for the SQLite database (e.g. "outalator.db" or ":memory:").
+	// Only used when Driver is "sqlite".
+	Path     string `yaml:"path"`
 }
 
 // AuthConfig holds OIDC authentication configuration
@@ -102,6 +108,12 @@ func Load(path string) (*Config, error) {
 		fmt.Sscanf(port, "%d", &cfg.GRPC.Port)
 	}
 
+	if dbDriver := os.Getenv("DB_DRIVER"); dbDriver != "" {
+		cfg.Database.Driver = dbDriver
+	}
+	if dbPath := os.Getenv("DB_PATH"); dbPath != "" {
+		cfg.Database.Path = dbPath
+	}
 	if dbHost := os.Getenv("DB_HOST"); dbHost != "" {
 		cfg.Database.Host = dbHost
 	}
