@@ -34,9 +34,16 @@ func NewServer(svc *service.Service) *Server {
 
 // Start begins listening on addr and blocks until the server is stopped.
 // It must be called in a goroutine if the caller needs to remain responsive
-// (e.g. to call Stop). The server is created without TLS; wire up
-// grpc.Creds for production use.
+// (e.g. to call Stop). Returns an error if the server has already been started.
+// The server is created without TLS; wire up grpc.Creds for production use.
 func (s *Server) Start(addr string) error {
+	s.mu.Lock()
+	if s.grpcServer != nil {
+		s.mu.Unlock()
+		return fmt.Errorf("server already started")
+	}
+	s.mu.Unlock()
+
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", addr, err)

@@ -32,7 +32,7 @@ jobs:
         # `continue-on-error` handles the case where the token is unset or
         # the Codecov service is unavailable, keeping CI green regardless.
         if: ${{ secrets.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3  # v5.3.1
         with:
           files: coverage.out
           flags: unit
@@ -64,7 +64,7 @@ jobs:
         # `continue-on-error` handles the case where the token is unset or
         # the Codecov service is unavailable, keeping CI green regardless.
         if: ${{ secrets.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3  # v5.3.1
         with:
           files: coverage-sqlite.out
           flags: sqlite
@@ -83,12 +83,12 @@ jobs:
           cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8  # v6.1.1
         with:
           version: v1.64.8
 
       - name: golangci-lint (SQLite)
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8  # v6.1.1
         with:
           version: v1.64.8
           args: --build-tags sqlite ./internal/storage/sqlite/...
