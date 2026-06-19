@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package outalator.v1;
 
-option go_package = "github.com/conallob/outalator/api/proto/v1;outalatorv1";
+option go_package = "github.com/conall/outalator/api/proto/v1;outalatorv1";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";

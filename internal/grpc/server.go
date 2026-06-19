@@ -2,9 +2,11 @@ package grpc
 
 import (
 	"context"
+	"fmt"
+	"net"
 
 	"github.com/conall/outalator/internal/service"
-	pb "github.com/conallob/outalator/api/proto/v1"
+	pb "github.com/conall/outalator/api/proto/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -17,13 +19,35 @@ type Server struct {
 	pb.UnimplementedAlertServiceServer
 	pb.UnimplementedHealthServiceServer
 
-	service *service.Service
+	service    *service.Service
+	grpcServer *grpc.Server
 }
 
 // NewServer creates a new gRPC server
 func NewServer(svc *service.Service) *Server {
 	return &Server{
 		service: svc,
+	}
+}
+
+// Start begins listening on addr and blocks until the server is stopped.
+func (s *Server) Start(addr string) error {
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("failed to listen on %s: %w", addr, err)
+	}
+	s.grpcServer = grpc.NewServer()
+	s.RegisterServices(s.grpcServer)
+	if err := s.grpcServer.Serve(lis); err != nil {
+		return fmt.Errorf("gRPC server error: %w", err)
+	}
+	return nil
+}
+
+// Stop performs a graceful shutdown of the gRPC server.
+func (s *Server) Stop() {
+	if s.grpcServer != nil {
+		s.grpcServer.GracefulStop()
 	}
 }
 
@@ -309,7 +333,7 @@ func (s *Server) SearchOutagesByTag(ctx context.Context, req *pb.SearchOutagesBy
 
 // ImportAlert imports an alert from an external service
 func (s *Server) ImportAlert(ctx context.Context, req *pb.ImportAlertRequest) (*pb.ImportAlertResponse, error) {
-	outageID, err := parseUUIDPtr(req.OutageId)
+	outageID, err := parseUUIDPtr(req.GetOutageId())
 	if err != nil {
 		return nil, err
 	}

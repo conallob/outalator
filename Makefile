@@ -1,4 +1,4 @@
-.PHONY: help proto grpc-deps build run test test-sqlite tidy-sqlite list-testable-pkgs clean
+.PHONY: help proto grpc-deps build run test test-sqlite tidy-sqlite clean
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -34,9 +34,6 @@ build-all: build build-import ## Build all binaries
 
 run: ## Run the application
 	@go run cmd/outalator/main.go
-
-list-testable-pkgs: ## List packages safe to test/vet in CI (excludes proto-generated dependencies)
-	@go list ./... | grep -v 'internal/grpc$$' | grep -v '/api/proto' | grep -v 'cmd/outalator'
 
 test: ## Run tests
 	@go test -v ./...

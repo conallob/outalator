@@ -22,12 +22,7 @@ jobs:
           cache: true
 
       - name: Run tests
-        # Packages that depend on generated proto code (not committed) are
-        # excluded via `make list-testable-pkgs`. Run `make proto` locally
-        # to generate the code and test those packages.
-        run: |
-          PKGS=$(make list-testable-pkgs)
-          go test -v -race -coverprofile=coverage.out -covermode=atomic $PKGS
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload coverage to Codecov
         # The `if` guard handles fork PRs where secrets are not exposed.
@@ -84,14 +79,16 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: go vet
-        run: |
-          PKGS=$(make list-testable-pkgs)
-          go vet $PKGS
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64
 
-      - name: go vet (SQLite)
-        run: |
-          go vet -tags sqlite ./internal/storage/sqlite/...
+      - name: golangci-lint (SQLite)
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64
+          args: --build-tags sqlite ./internal/storage/sqlite/...
 
       - name: Check go.mod tidy
         # Must use GOFLAGS="-tags=sqlite" so modernc.org/sqlite (only imported

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/conall/outalator/internal/domain"
-	pb "github.com/conallob/outalator/api/proto/v1"
+	pb "github.com/conall/outalator/api/proto/v1"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -106,10 +106,13 @@ func copyStringMap(m map[string]string) map[string]string {
 // Source metadata converters
 // ============================================================================
 
-// sourceMetadataToProto converts domain source_metadata map to protobuf oneof
-func sourceMetadataToProto(source string, metadata map[string]any) (pb.isAlert_SourceMetadata, error) {
+// setSourceMetadata sets the source_metadata oneof field on a pb.Alert from a
+// domain source/metadata pair. The generated isAlert_SourceMetadata interface
+// is unexported, so we must set the field directly rather than returning the
+// interface value from a helper.
+func setSourceMetadata(pbAlert *pb.Alert, source string, metadata map[string]any) error {
 	if metadata == nil {
-		return nil, nil
+		return nil
 	}
 
 	switch source {
@@ -136,7 +139,7 @@ func sourceMetadataToProto(source string, metadata map[string]any) (pb.isAlert_S
 		if v, ok := metadata["html_url"].(string); ok {
 			pd.HtmlUrl = v
 		}
-		return &pb.Alert_Pagerduty{Pagerduty: pd}, nil
+		pbAlert.SourceMetadata = &pb.Alert_Pagerduty{Pagerduty: pd}
 
 	case "opsgenie":
 		og := &pb.OpsGenieMetadata{}
@@ -161,29 +164,31 @@ func sourceMetadataToProto(source string, metadata map[string]any) (pb.isAlert_S
 		if v, ok := metadata["owner"].(string); ok {
 			og.Owner = v
 		}
-		return &pb.Alert_Opsgenie{Opsgenie: og}, nil
+		pbAlert.SourceMetadata = &pb.Alert_Opsgenie{Opsgenie: og}
 
 	default:
-		// Generic metadata
 		props := make(map[string]string)
 		for k, v := range metadata {
 			if str, ok := v.(string); ok {
 				props[k] = str
 			}
 		}
-		return &pb.Alert_Generic{Generic: &pb.GenericMetadata{Properties: props}}, nil
+		pbAlert.SourceMetadata = &pb.Alert_Generic{Generic: &pb.GenericMetadata{Properties: props}}
 	}
+	return nil
 }
 
-// protoToSourceMetadata converts protobuf oneof source_metadata to domain map
-func protoToSourceMetadata(sm pb.isAlert_SourceMetadata) map[string]any {
-	if sm == nil {
+// protoToSourceMetadata converts the source_metadata oneof field of a pb.Alert
+// to a domain map. Accepts *pb.Alert (not the unexported isAlert_SourceMetadata
+// interface) so the caller can type-switch on the exported concrete types.
+func protoToSourceMetadata(pbAlert *pb.Alert) map[string]any {
+	if pbAlert == nil {
 		return nil
 	}
 
 	result := make(map[string]any)
 
-	switch v := sm.(type) {
+	switch v := pbAlert.SourceMetadata.(type) {
 	case *pb.Alert_Pagerduty:
 		if v.Pagerduty != nil {
 			result["incident_key"] = v.Pagerduty.IncidentKey
@@ -244,8 +249,8 @@ func OutageDomainToProto(o *domain.Outage) (*pb.Outage, error) {
 	}
 
 	// Convert associated alerts
-	for _, alert := range o.Alerts {
-		pbAlert, err := AlertDomainToProto(alert)
+	for i := range o.Alerts {
+		pbAlert, err := AlertDomainToProto(&o.Alerts[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert alert: %w", err)
 		}
@@ -253,8 +258,8 @@ func OutageDomainToProto(o *domain.Outage) (*pb.Outage, error) {
 	}
 
 	// Convert associated notes
-	for _, note := range o.Notes {
-		pbNote, err := NoteDomainToProto(note)
+	for i := range o.Notes {
+		pbNote, err := NoteDomainToProto(&o.Notes[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert note: %w", err)
 		}
@@ -262,8 +267,8 @@ func OutageDomainToProto(o *domain.Outage) (*pb.Outage, error) {
 	}
 
 	// Convert associated tags
-	for _, tag := range o.Tags {
-		pbTag, err := TagDomainToProto(tag)
+	for i := range o.Tags {
+		pbTag, err := TagDomainToProto(&o.Tags[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert tag: %w", err)
 		}
@@ -303,7 +308,7 @@ func OutageProtoToDomain(pb *pb.Outage) (*domain.Outage, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert alert: %w", err)
 		}
-		outage.Alerts = append(outage.Alerts, alert)
+		outage.Alerts = append(outage.Alerts, *alert)
 	}
 
 	// Convert associated notes
@@ -312,7 +317,7 @@ func OutageProtoToDomain(pb *pb.Outage) (*domain.Outage, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert note: %w", err)
 		}
-		outage.Notes = append(outage.Notes, note)
+		outage.Notes = append(outage.Notes, *note)
 	}
 
 	// Convert associated tags
@@ -321,7 +326,7 @@ func OutageProtoToDomain(pb *pb.Outage) (*domain.Outage, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert tag: %w", err)
 		}
-		outage.Tags = append(outage.Tags, tag)
+		outage.Tags = append(outage.Tags, *tag)
 	}
 
 	return outage, nil
@@ -337,33 +342,31 @@ func AlertDomainToProto(a *domain.Alert) (*pb.Alert, error) {
 		return nil, nil
 	}
 
-	sourceMetadata, err := sourceMetadataToProto(a.Source, a.SourceMetadata)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert source_metadata: %w", err)
-	}
-
 	customFields, err := mapToProtoStruct(a.CustomFields)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert custom_fields: %w", err)
 	}
 
-	return &pb.Alert{
-		Id:              a.ID.String(),
-		OutageId:        a.OutageID.String(),
-		ExternalId:      a.ExternalID,
-		Source:          a.Source,
-		TeamName:        a.TeamName,
-		Title:           a.Title,
-		Description:     a.Description,
-		Severity:        a.Severity,
-		TriggeredAt:     convertTimestampToProto(a.TriggeredAt),
-		AcknowledgedAt:  convertTimestampPtrToProto(a.AcknowledgedAt),
-		ResolvedAt:      convertTimestampPtrToProto(a.ResolvedAt),
-		CreatedAt:       convertTimestampToProto(a.CreatedAt),
-		SourceMetadata:  sourceMetadata,
-		Metadata:        copyStringMap(a.Metadata),
-		CustomFields:    customFields,
-	}, nil
+	pbAlert := &pb.Alert{
+		Id:             a.ID.String(),
+		OutageId:       a.OutageID.String(),
+		ExternalId:     a.ExternalID,
+		Source:         a.Source,
+		TeamName:       a.TeamName,
+		Title:          a.Title,
+		Description:    a.Description,
+		Severity:       a.Severity,
+		TriggeredAt:    convertTimestampToProto(a.TriggeredAt),
+		AcknowledgedAt: convertTimestampPtrToProto(a.AcknowledgedAt),
+		ResolvedAt:     convertTimestampPtrToProto(a.ResolvedAt),
+		CreatedAt:      convertTimestampToProto(a.CreatedAt),
+		Metadata:       copyStringMap(a.Metadata),
+		CustomFields:   customFields,
+	}
+	if err := setSourceMetadata(pbAlert, a.Source, a.SourceMetadata); err != nil {
+		return nil, fmt.Errorf("failed to convert source_metadata: %w", err)
+	}
+	return pbAlert, nil
 }
 
 // AlertProtoToDomain converts pb.Alert to domain.Alert
@@ -383,21 +386,21 @@ func AlertProtoToDomain(pb *pb.Alert) (*domain.Alert, error) {
 	}
 
 	return &domain.Alert{
-		ID:              id,
-		OutageID:        outageID,
-		ExternalID:      pb.ExternalId,
-		Source:          pb.Source,
-		TeamName:        pb.TeamName,
-		Title:           pb.Title,
-		Description:     pb.Description,
-		Severity:        pb.Severity,
-		TriggeredAt:     convertProtoToTimestamp(pb.TriggeredAt),
-		AcknowledgedAt:  convertProtoToTimestampPtr(pb.AcknowledgedAt),
-		ResolvedAt:      convertProtoToTimestampPtr(pb.ResolvedAt),
-		CreatedAt:       convertProtoToTimestamp(pb.CreatedAt),
-		SourceMetadata:  protoToSourceMetadata(pb.SourceMetadata),
-		Metadata:        copyStringMap(pb.Metadata),
-		CustomFields:    protoStructToMap(pb.CustomFields),
+		ID:             id,
+		OutageID:       outageID,
+		ExternalID:     pb.ExternalId,
+		Source:         pb.Source,
+		TeamName:       pb.TeamName,
+		Title:          pb.Title,
+		Description:    pb.Description,
+		Severity:       pb.Severity,
+		TriggeredAt:    convertProtoToTimestamp(pb.TriggeredAt),
+		AcknowledgedAt: convertProtoToTimestampPtr(pb.AcknowledgedAt),
+		ResolvedAt:     convertProtoToTimestampPtr(pb.ResolvedAt),
+		CreatedAt:      convertProtoToTimestamp(pb.CreatedAt),
+		SourceMetadata: protoToSourceMetadata(pb),
+		Metadata:       copyStringMap(pb.Metadata),
+		CustomFields:   protoStructToMap(pb.CustomFields),
 	}, nil
 }
 
@@ -528,7 +531,6 @@ func CreateOutageRequestProtoToDomain(pb *pb.CreateOutageRequest) (domain.Create
 		CustomFields: protoStructToMap(pb.CustomFields),
 	}
 
-	// Convert tags
 	for _, pbTag := range pb.Tags {
 		req.Tags = append(req.Tags, domain.TagInput{
 			Key:          pbTag.Key,
