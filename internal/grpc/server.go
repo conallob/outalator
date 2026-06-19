@@ -37,23 +37,28 @@ func NewServer(svc *service.Service) *Server {
 // (e.g. to call Stop). Returns an error if the server has already been started.
 // The server is created without TLS; wire up grpc.Creds for production use.
 func (s *Server) Start(addr string) error {
+	// Reserve grpcServer under the lock before releasing it. Without this,
+	// two concurrent callers could both pass the nil check, open separate
+	// listeners, and race to assign grpcServer (TOCTOU).
+	srv := grpc.NewServer()
 	s.mu.Lock()
 	if s.grpcServer != nil {
 		s.mu.Unlock()
+		srv.Stop() // discard the server we just created
 		return fmt.Errorf("server already started")
 	}
+	s.grpcServer = srv
 	s.mu.Unlock()
+
+	s.RegisterServices(srv)
 
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
+		s.mu.Lock()
+		s.grpcServer = nil
+		s.mu.Unlock()
 		return fmt.Errorf("failed to listen on %s: %w", addr, err)
 	}
-	srv := grpc.NewServer()
-	s.RegisterServices(srv)
-
-	s.mu.Lock()
-	s.grpcServer = srv
-	s.mu.Unlock()
 
 	if err := srv.Serve(lis); err != nil {
 		return fmt.Errorf("gRPC server error: %w", err)
