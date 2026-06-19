@@ -17,5 +17,5 @@ linters:
   exclusions:
     rules:
       # Generated proto files produce false positives from some linters.
-      - path: "api/proto/v1/.*\\.pb\\.go"
+      - path: 'api/proto/v1/.*\.pb\.go'
         linters: [unused, staticcheck, errcheck, gosec]
