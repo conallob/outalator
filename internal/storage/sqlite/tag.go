@@ -42,7 +42,7 @@ func (s *SQLiteStorage) GetTag(ctx context.Context, id uuid.UUID) (*domain.Tag, 
 		WHERE id = ?
 	`
 	tag, err := scanTagRow(s.db.QueryRowContext(ctx, query, id.String()).Scan)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, domain.ErrNotFound) {
 		return nil, fmt.Errorf("tag %s: %w", id, domain.ErrNotFound)
 	}
 	return tag, err
@@ -128,7 +128,8 @@ func (s *SQLiteStorage) FindOutagesByTag(ctx context.Context, key, value string)
 }
 
 // scanTagRow populates a Tag from a single row using the provided scan
-// function. Returns sql.ErrNoRows when no row is found.
+// function. Returns domain.ErrNotFound when the underlying error is
+// sql.ErrNoRows.
 func scanTagRow(scan scanFunc) (*domain.Tag, error) {
 	tag := &domain.Tag{}
 	var idStr, outageIDStr, customFieldsJSON string
@@ -136,6 +137,9 @@ func scanTagRow(scan scanFunc) (*domain.Tag, error) {
 		&idStr, &outageIDStr, &tag.Key, &tag.Value, &tag.CreatedAt,
 		&customFieldsJSON,
 	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, err
 	}
 

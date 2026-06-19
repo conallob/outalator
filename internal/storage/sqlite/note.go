@@ -47,7 +47,7 @@ func (s *SQLiteStorage) GetNote(ctx context.Context, id uuid.UUID) (*domain.Note
 		WHERE id = ?
 	`
 	note, err := scanNoteRow(s.db.QueryRowContext(ctx, query, id.String()).Scan)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, domain.ErrNotFound) {
 		return nil, fmt.Errorf("note %s: %w", id, domain.ErrNotFound)
 	}
 	return note, err
@@ -137,7 +137,8 @@ func (s *SQLiteStorage) DeleteNote(ctx context.Context, id uuid.UUID) error {
 }
 
 // scanNoteRow populates a Note from a single row using the provided scan
-// function. Returns sql.ErrNoRows when no row is found.
+// function. Returns domain.ErrNotFound when the underlying error is
+// sql.ErrNoRows.
 func scanNoteRow(scan scanFunc) (*domain.Note, error) {
 	note := &domain.Note{}
 	var idStr, outageIDStr, metadataJSON, customFieldsJSON string
@@ -146,6 +147,9 @@ func scanNoteRow(scan scanFunc) (*domain.Note, error) {
 		&note.Author, &note.CreatedAt, &note.UpdatedAt,
 		&metadataJSON, &customFieldsJSON,
 	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, err
 	}
 

@@ -3,6 +3,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/conall/outalator/internal/config"
@@ -12,7 +13,7 @@ import (
 // New creates a Storage instance based on cfg.Driver.
 // By default only "postgres" is supported. Build with -tags sqlite to also
 // enable "sqlite".
-func New(cfg config.DatabaseConfig) (Storage, error) {
+func New(_ context.Context, cfg config.DatabaseConfig) (Storage, error) {
 	switch cfg.Driver {
 	case DriverSQLite:
 		return nil, fmt.Errorf(

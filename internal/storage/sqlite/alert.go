@@ -156,9 +156,6 @@ func (s *SQLiteStorage) UpdateAlert(ctx context.Context, alert *domain.Alert) er
 	return nil
 }
 
-// scanFunc is the common signature for both (*sql.Row).Scan and (*sql.Rows).Scan.
-type scanFunc func(dest ...any) error
-
 // scanAlertRow populates an Alert from a single row using the provided scan
 // function. Returns domain.ErrNotFound when the underlying error is
 // sql.ErrNoRows.

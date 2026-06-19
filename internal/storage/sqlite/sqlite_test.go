@@ -16,7 +16,7 @@ import (
 // newStore opens a fresh in-memory database for each test.
 func newStore(t *testing.T) *sqlite.SQLiteStorage {
 	t.Helper()
-	store, err := sqlite.New(":memory:")
+	store, err := sqlite.New(context.Background(), ":memory:")
 	if err != nil {
 		t.Fatalf("sqlite.New: %v", err)
 	}
@@ -148,6 +148,33 @@ func TestOutage_ListPagination(t *testing.T) {
 	}
 	if len(page2) != 2 {
 		t.Errorf("page 2 count: got %d, want 2", len(page2))
+	}
+}
+
+func TestOutage_ListLimitZero(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+
+	for i := 0; i < 3; i++ {
+		o := &domain.Outage{
+			ID:        uuid.New(),
+			Title:     "outage",
+			Status:    "open",
+			Severity:  "low",
+			CreatedAt: now(),
+			UpdatedAt: now(),
+		}
+		if err := s.CreateOutage(ctx, o); err != nil {
+			t.Fatalf("CreateOutage %d: %v", i, err)
+		}
+	}
+
+	results, err := s.ListOutages(ctx, 0, 0)
+	if err != nil {
+		t.Fatalf("ListOutages(limit=0): %v", err)
+	}
+	if len(results) != 0 {
+		t.Errorf("ListOutages(limit=0): got %d rows, want 0", len(results))
 	}
 }
 

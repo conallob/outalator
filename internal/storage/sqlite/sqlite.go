@@ -21,6 +21,10 @@ type SQLiteStorage struct {
 	db *sql.DB
 }
 
+// scanFunc is the common signature for (*sql.Row).Scan and (*sql.Rows).Scan,
+// used by all per-entity scan helpers in this package.
+type scanFunc func(dest ...any) error
+
 // schema is the DDL applied automatically on first open (all statements are
 // idempotent via CREATE IF NOT EXISTS).
 //
@@ -29,20 +33,30 @@ var schema string
 
 // NewStorage creates an SQLiteStorage from an application DatabaseConfig.
 // cfg.Path is the file path (e.g. "outalator.db" or ":memory:").
-func NewStorage(cfg config.DatabaseConfig) (*SQLiteStorage, error) {
+func NewStorage(ctx context.Context, cfg config.DatabaseConfig) (*SQLiteStorage, error) {
 	path := cfg.Path
 	if path == "" {
 		path = "outalator.db"
 	}
-	return New(path)
+	return New(ctx, path)
 }
 
 // New opens (or creates) the SQLite database at path and runs schema migrations.
-func New(path string) (*SQLiteStorage, error) {
-	// Embed the foreign_keys pragma in the DSN so it is applied on every
-	// connection the pool creates, not just the first one.
-	dsn := buildDSN(path)
+// ctx is used for the ping and schema migration; cancelling it aborts startup.
+func New(ctx context.Context, path string) (*SQLiteStorage, error) {
+	// Reject bare paths containing '?' or '&' to prevent accidental DSN
+	// parameter injection from operator-supplied configuration (e.g. DB_PATH).
+	// Callers that need advanced URI options should pass a "file:" URI directly.
+	if !strings.HasPrefix(path, "file:") && path != ":memory:" {
+		if strings.ContainsAny(path, "?&") {
+			return nil, fmt.Errorf(
+				"sqlite path %q must not contain '?' or '&'; use a file: URI for advanced DSN options",
+				path,
+			)
+		}
+	}
 
+	dsn := buildDSN(path)
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
@@ -52,13 +66,13 @@ func New(path string) (*SQLiteStorage, error) {
 	// SQLITE_BUSY contention.
 	db.SetMaxOpenConns(1)
 
-	if err := db.PingContext(context.Background()); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to ping sqlite database: %w", err)
 	}
 
 	s := &SQLiteStorage{db: db}
-	if err := s.migrate(context.Background()); err != nil {
+	if err := s.migrate(ctx); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to migrate sqlite database: %w", err)
 	}
@@ -110,6 +124,9 @@ func marshalJSONMap(m map[string]string) ([]byte, error) {
 //   - untyped nil            → {}
 //   - typed-nil map/ptr/etc. → {}
 //   - typed-nil slice        → []  (avoids storing {} which can't deserialise back into a slice)
+//
+// Chan and Func are handled defensively (they cannot appear in domain structs)
+// to prevent a panic from reflect.Value.IsNil on an unexpected type.
 func marshalJSONAny(v any) ([]byte, error) {
 	if v == nil {
 		return []byte("{}"), nil

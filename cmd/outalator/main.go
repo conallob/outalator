@@ -64,7 +64,7 @@ func main() {
 	}
 
 	// Initialize storage backend (postgres by default; sqlite with -tags sqlite)
-	db, err := storage.New(cfg.Database)
+	db, err := storage.New(context.Background(), cfg.Database)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
