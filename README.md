@@ -1,5 +1,10 @@
 # Outalator
 
+[![CI](https://github.com/conallob/outalator/actions/workflows/ci.yml/badge.svg)](https://github.com/conallob/outalator/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/conallob/outalator/branch/main/graph/badge.svg)](https://codecov.io/gh/conallob/outalator)
+[![Go](https://img.shields.io/github/go-mod/go-version/conallob/outalator)](go.mod)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A modern web application for tracking outage troubleshooting notes for Site Reliability Engineers (SREs), inspired by [Outalator](https://sre.google/sre-book/tracking-outages/) from the Google SRE book.
 
 ## Features

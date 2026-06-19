@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests
+        # Exclude internal/grpc: it imports generated proto code that is not
+        # committed to the repo. Run `make proto` locally to generate it first.
+        run: |
+          PKGS=$(go list ./... 2>/dev/null | grep -v '/grpc' | grep -v '/api/proto')
+          go test -v -race -coverprofile=coverage.out -covermode=atomic $PKGS
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.out
+          flags: unit
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  test-sqlite:
+    name: Tests (SQLite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run SQLite storage tests
+        run: |
+          go test -v -race -tags sqlite \
+            -coverprofile=coverage-sqlite.out \
+            -covermode=atomic \
+            ./internal/storage/sqlite/...
+
+      - name: Upload SQLite coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage-sqlite.out
+          flags: sqlite
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: go vet
+        run: |
+          PKGS=$(go list ./... 2>/dev/null | grep -v '/grpc' | grep -v '/api/proto')
+          go vet $PKGS
+
+      - name: go vet (SQLite)
+        run: |
+          go vet -tags sqlite ./internal/storage/sqlite/...
