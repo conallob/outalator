@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/conall/outalator/internal/service"
 	pb "github.com/conall/outalator/api/proto/v1"
@@ -20,6 +21,7 @@ type Server struct {
 	pb.UnimplementedHealthServiceServer
 
 	service    *service.Service
+	mu         sync.Mutex
 	grpcServer *grpc.Server
 }
 
@@ -31,17 +33,22 @@ func NewServer(svc *service.Service) *Server {
 }
 
 // Start begins listening on addr and blocks until the server is stopped.
-// The server is created without TLS; wire up grpc.Creds for production use.
-// s.grpcServer is set before Serve is called; Stop may be called concurrently
-// once Serve is running because GracefulStop is thread-safe.
+// It must be called in a goroutine if the caller needs to remain responsive
+// (e.g. to call Stop). The server is created without TLS; wire up
+// grpc.Creds for production use.
 func (s *Server) Start(addr string) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", addr, err)
 	}
-	s.grpcServer = grpc.NewServer()
-	s.RegisterServices(s.grpcServer)
-	if err := s.grpcServer.Serve(lis); err != nil {
+	srv := grpc.NewServer()
+	s.RegisterServices(srv)
+
+	s.mu.Lock()
+	s.grpcServer = srv
+	s.mu.Unlock()
+
+	if err := srv.Serve(lis); err != nil {
 		return fmt.Errorf("gRPC server error: %w", err)
 	}
 	return nil
@@ -52,8 +59,11 @@ func (s *Server) Start(addr string) error {
 // (e.g., one whose services were registered via RegisterServices onto an
 // externally managed *grpc.Server).
 func (s *Server) Stop() {
-	if s.grpcServer != nil {
-		s.grpcServer.GracefulStop()
+	s.mu.Lock()
+	srv := s.grpcServer
+	s.mu.Unlock()
+	if srv != nil {
+		srv.GracefulStop()
 	}
 }
 
