@@ -65,17 +65,20 @@ type Tag struct {
 	CustomFields map[string]any `json:"custom_fields,omitempty"` // Additional structured data
 }
 
+// TagInput holds the fields needed to create a tag, used in CreateOutageRequest.
+type TagInput struct {
+	Key          string         `json:"key"`
+	Value        string         `json:"value"`
+	CustomFields map[string]any `json:"custom_fields,omitempty"`
+}
+
 // CreateOutageRequest represents the data needed to create a new outage
 type CreateOutageRequest struct {
 	Title        string            `json:"title"`
 	Description  string            `json:"description"`
 	Severity     string            `json:"severity"`
 	AlertIDs     []string          `json:"alert_ids"` // External alert IDs to associate
-	Tags         []struct {
-		Key          string         `json:"key"`
-		Value        string         `json:"value"`
-		CustomFields map[string]any `json:"custom_fields,omitempty"`
-	} `json:"tags,omitempty"`
+	Tags         []TagInput        `json:"tags,omitempty"`
 	Metadata     map[string]string `json:"metadata,omitempty"`
 	CustomFields map[string]any    `json:"custom_fields,omitempty"`
 }

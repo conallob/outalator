@@ -13,9 +13,8 @@ bin/
 # Output of the go coverage tool
 *.out
 
-# Generated protobuf files
-*.pb.go
-*_grpc.pb.go
+# Generated protobuf files are committed so CI can build without protoc.
+# See scripts/generate-proto.sh and `make proto` to regenerate.
 
 # Dependency directories
 vendor/

@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage to Codecov
+        # The `if` guard handles fork PRs where secrets are not exposed.
+        # `continue-on-error` handles the case where the token is unset or
+        # the Codecov service is unavailable, keeping CI green regardless.
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3  # v5.3.1
+        with:
+          files: coverage.out
+          flags: unit
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
+
+  test-sqlite:
+    name: Tests (SQLite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run SQLite storage tests
+        # Scope is intentionally limited to ./internal/storage/sqlite/... today.
+        # Broaden this pattern if other -tags sqlite packages are added.
+        run: |
+          go test -v -race -tags sqlite \
+            -coverprofile=coverage-sqlite.out \
+            -covermode=atomic \
+            ./internal/storage/sqlite/...
+
+      - name: Upload SQLite coverage to Codecov
+        # The `if` guard handles fork PRs where secrets are not exposed.
+        # `continue-on-error` handles the case where the token is unset or
+        # the Codecov service is unavailable, keeping CI green regardless.
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3  # v5.3.1
+        with:
+          files: coverage-sqlite.out
+          flags: sqlite
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8  # v6.1.1
+        with:
+          version: v1.64.8
+
+      - name: golangci-lint (SQLite)
+        uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8  # v6.1.1
+        with:
+          version: v1.64.8
+          args: --build-tags sqlite ./internal/storage/sqlite/...
+
+      - name: Check go.mod tidy
+        # Must use GOFLAGS="-tags=sqlite" so modernc.org/sqlite (only imported
+        # behind the sqlite build tag) is not stripped from go.mod by tidy.
+        # A plain `go mod tidy` would always produce a diff and fail this step.
+        run: |
+          GOFLAGS="-tags=sqlite" go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Install protoc
+        # Pin to the exact version used to generate the committed .pb.go files
+        # (see header in api/proto/v1/outalator.pb.go: protoc v3.21.12).
+        # Verify the download integrity before extracting.
+        run: |
+          PB_VER=3.21.12
+          curl -Lo /tmp/protoc.zip \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PB_VER}/protoc-${PB_VER}-linux-x86_64.zip"
+          echo "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5  /tmp/protoc.zip" | sha256sum -c -
+          sudo unzip -q /tmp/protoc.zip -d /usr/local
+
+      - name: Check proto files are up to date
+        # Detects edits to outalator.proto that were not followed by `make proto`.
+        # grpc-deps installs protoc-gen-go and protoc-gen-go-grpc.
+        run: |
+          make grpc-deps
+          make proto
+          git diff --exit-code api/proto/v1/

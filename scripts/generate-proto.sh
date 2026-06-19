@@ -31,12 +31,12 @@ mkdir -p api/proto/v1
 echo "Generating Go code from proto files..."
 protoc \
     --go_out=. \
-    --go_opt=paths=source_relative \
+    --go_opt=module=github.com/conall/outalator \
     --go-grpc_out=. \
-    --go-grpc_opt=paths=source_relative \
+    --go-grpc_opt=module=github.com/conall/outalator \
     api/proto/outalator.proto
 
 echo "✓ Proto files generated successfully!"
 echo "  Generated files:"
-echo "    - api/proto/outalator.pb.go (messages)"
-echo "    - api/proto/outalator_grpc.pb.go (services)"
+echo "    - api/proto/v1/outalator.pb.go (messages)"
+echo "    - api/proto/v1/outalator_grpc.pb.go (services)"

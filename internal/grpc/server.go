@@ -2,9 +2,12 @@ package grpc
 
 import (
 	"context"
+	"fmt"
+	"net"
+	"sync"
 
 	"github.com/conall/outalator/internal/service"
-	pb "github.com/conallob/outalator/api/proto/v1"
+	pb "github.com/conall/outalator/api/proto/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -17,7 +20,9 @@ type Server struct {
 	pb.UnimplementedAlertServiceServer
 	pb.UnimplementedHealthServiceServer
 
-	service *service.Service
+	service    *service.Service
+	mu         sync.Mutex
+	grpcServer *grpc.Server
 }
 
 // NewServer creates a new gRPC server
@@ -27,7 +32,76 @@ func NewServer(svc *service.Service) *Server {
 	}
 }
 
-// RegisterServices registers all gRPC services with the gRPC server
+// Start begins listening on addr and blocks until the server is stopped.
+// It must be called in a goroutine if the caller needs to remain responsive
+// (e.g. to call Stop). Returns an error if the server has already been started.
+// The server is created without TLS; wire up grpc.Creds for production use.
+func (s *Server) Start(addr string) error {
+	// Register services before the server is visible to Stop(), so a
+	// concurrent Stop() cannot call GracefulStop() between assignment and
+	// RegisterServices — which would cause Serve to return immediately.
+	// The TOCTOU guard (check-then-set) still holds because srv is local
+	// until after RegisterServices completes.
+	srv := grpc.NewServer()
+	s.RegisterServices(srv)
+
+	s.mu.Lock()
+	if s.grpcServer != nil {
+		s.mu.Unlock()
+		srv.GracefulStop() // discard the server we just created
+		return fmt.Errorf("server already started")
+	}
+	s.grpcServer = srv
+	s.mu.Unlock()
+
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		srv.GracefulStop()
+		s.mu.Lock()
+		s.grpcServer = nil
+		s.mu.Unlock()
+		return fmt.Errorf("failed to listen on %s: %w", addr, err)
+	}
+
+	serveErr := srv.Serve(lis)
+
+	// Clear grpcServer so Start() can be called again after Stop()+Serve() returns.
+	s.mu.Lock()
+	s.grpcServer = nil
+	s.mu.Unlock()
+
+	if serveErr != nil {
+		return fmt.Errorf("gRPC server error: %w", serveErr)
+	}
+	return nil
+}
+
+// Stop performs a graceful shutdown of the gRPC server started by Start.
+// Blocks until all in-flight RPCs have completed. grpcServer is cleared only
+// after GracefulStop returns, so a concurrent Start() call cannot bind the
+// same address while the old server is still draining connections.
+// It has no effect when called on a Server that was not started via Start
+// (e.g., one whose services were registered via RegisterServices onto an
+// externally managed *grpc.Server).
+func (s *Server) Stop() {
+	s.mu.Lock()
+	srv := s.grpcServer
+	s.mu.Unlock()
+	if srv != nil {
+		srv.GracefulStop() // drain completes before we clear the field
+		s.mu.Lock()
+		// Only nil the field if it still holds this server; Start() may have
+		// already cleared it when Serve() returned.
+		if s.grpcServer == srv {
+			s.grpcServer = nil
+		}
+		s.mu.Unlock()
+	}
+}
+
+// RegisterServices registers all gRPC services with an externally managed
+// *grpc.Server. Use this when the caller controls the server lifecycle.
+// Use Start/Stop instead when this struct should own the lifecycle.
 func (s *Server) RegisterServices(grpcServer *grpc.Server) {
 	pb.RegisterOutageServiceServer(grpcServer, s)
 	pb.RegisterNoteServiceServer(grpcServer, s)
@@ -309,7 +383,7 @@ func (s *Server) SearchOutagesByTag(ctx context.Context, req *pb.SearchOutagesBy
 
 // ImportAlert imports an alert from an external service
 func (s *Server) ImportAlert(ctx context.Context, req *pb.ImportAlertRequest) (*pb.ImportAlertResponse, error) {
-	outageID, err := parseUUIDPtr(req.OutageId)
+	outageID, err := parseUUIDPtr(req.GetOutageId())
 	if err != nil {
 		return nil, err
 	}

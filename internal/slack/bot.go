@@ -223,11 +223,7 @@ func (b *Bot) handleOutageCommand(ctx context.Context, msg MessageEvent) {
 		Title:       title,
 		Description: description,
 		Severity:    severity,
-		Tags: []struct {
-			Key          string         `json:"key"`
-			Value        string         `json:"value"`
-			CustomFields map[string]any `json:"custom_fields,omitempty"`
-		}{
+		Tags: []domain.TagInput{
 			{Key: "slack_channel", Value: msg.Channel},
 			{Key: "slack_user", Value: msg.User},
 		},
