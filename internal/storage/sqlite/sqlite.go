@@ -95,6 +95,10 @@ func buildDSN(path string) string {
 	// Enable foreign-key enforcement and WAL journal mode for file databases.
 	// WAL improves concurrent read latency and is the standard recommendation
 	// for any SQLite database accessed by more than one goroutine.
+	//
+	// Note: pragmas are appended, not replaced. If the caller supplies a file:
+	// URI that already sets conflicting pragmas (e.g. _pragma=foreign_keys(OFF)),
+	// the last value wins in modernc.org/sqlite, so our pragmas will override.
 	pragmas := "_pragma=foreign_keys(ON)&_pragma=journal_mode(WAL)"
 	if strings.HasPrefix(path, "file:") {
 		if strings.Contains(path, "?") {
@@ -109,6 +113,11 @@ func buildDSN(path string) string {
 // migrate runs the embedded schema DDL (idempotent CREATE IF NOT EXISTS).
 // Statements are executed one at a time because database/sql's ExecContext does
 // not guarantee multi-statement support across all drivers.
+//
+// Caution: splitting on ";" will mis-parse any future statement that contains
+// a semicolon inside a string literal (e.g. DEFAULT 'a;b') or an inline
+// comment (e.g. -- deprecated; use X). Keep schema.sql free of semicolons
+// outside statement terminators.
 func (s *SQLiteStorage) migrate(ctx context.Context) error {
 	for _, stmt := range strings.Split(schema, ";") {
 		stmt = strings.TrimSpace(stmt)

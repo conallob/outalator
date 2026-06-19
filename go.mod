@@ -28,8 +28,10 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	// modernc.org/sqlite and its transitive deps are required by -tags sqlite.
-	// Run `go mod tidy -tags sqlite` (or `make tidy-sqlite`) to keep them in sync.
-	// A plain `go mod tidy` without -tags sqlite will remove these entries.
+	// Use `GOFLAGS="-tags=sqlite" go mod tidy` (or `make tidy-sqlite`) to keep
+	// them in sync; a plain `go mod tidy` without the tag will remove them.
+	// All entries remain // indirect because go mod tidy cannot see the import
+	// in factory_sqlite.go without the build tag — this is a known Go limitation.
 	modernc.org/libc v1.72.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect

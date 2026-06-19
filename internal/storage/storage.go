@@ -7,7 +7,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Storage defines the interface for data persistence
+// Storage defines the interface for data persistence.
+// Implementations may normalise nil map fields (e.g. Metadata, CustomFields)
+// to empty non-nil maps on round-trip. Callers should use len(m) == 0 rather
+// than m == nil to test for an absent map after reading from storage.
 type Storage interface {
 	OutageStorage
 	AlertStorage

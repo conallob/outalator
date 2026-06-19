@@ -59,8 +59,10 @@ Adding `modernc.org/sqlite` requires Go 1.25.0 (the module's minimum). The `go` 
 Because `modernc.org/sqlite` is only imported from files with `//go:build sqlite`, a plain `go mod tidy` (without the build tag) will **remove** it from `go.mod`. Always use the tagged tidy when updating dependencies:
 
 ```bash
-make tidy-sqlite   # equivalent to: go mod tidy -tags sqlite
+make tidy-sqlite   # equivalent to: GOFLAGS="-tags=sqlite" go mod tidy
 ```
+
+The entries remain marked `// indirect` in `go.mod` even though they are direct imports — this is a known Go tooling limitation when dependencies are gated behind custom build tags.
 
 ## Architecture
 

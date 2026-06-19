@@ -42,7 +42,7 @@ test-sqlite: ## Run tests with SQLite backend enabled
 	@go test -v -tags sqlite ./...
 
 tidy-sqlite: ## Update go.mod/go.sum including SQLite dependencies
-	@go mod tidy -tags sqlite
+	@GOFLAGS="-tags=sqlite" go mod tidy
 
 clean: ## Clean build artifacts
 	@rm -rf bin/
