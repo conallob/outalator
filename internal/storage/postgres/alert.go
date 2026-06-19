@@ -147,7 +147,7 @@ func (s *PostgresStorage) ListAlertsByOutage(ctx context.Context, outageID uuid.
 	if err != nil {
 		return nil, fmt.Errorf("failed to list alerts: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var alerts []*domain.Alert
 	for rows.Next() {

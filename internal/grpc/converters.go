@@ -62,14 +62,6 @@ func parseUUIDPtr(s string) (*uuid.UUID, error) {
 	return &id, nil
 }
 
-// stringPtr creates a pointer to a string
-func stringPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
 // ============================================================================
 // Helper functions for metadata and custom fields conversions
 // ============================================================================

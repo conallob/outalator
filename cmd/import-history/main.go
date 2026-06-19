@@ -126,7 +126,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to connect to database: %v", err)
 		}
-		defer store.Close()
+		defer func() { _ = store.Close() }()
 	}
 
 	// Run import
@@ -166,7 +166,10 @@ func listAvailableTeams(ctx context.Context, svc interface{}, serviceName string
 
 	switch serviceName {
 	case "pagerduty":
-		pdService := svc.(*pagerduty.Service)
+		pdService, ok := svc.(*pagerduty.Service)
+		if !ok {
+			log.Fatalf("Expected *pagerduty.Service but got unexpected type")
+		}
 		pdTeams, err := pdService.ListTeams(ctx)
 		if err != nil {
 			log.Fatalf("Failed to list teams: %v", err)
@@ -176,7 +179,10 @@ func listAvailableTeams(ctx context.Context, svc interface{}, serviceName string
 			teams[i] = &teamAdapter{id: pdTeams[i].ID, name: pdTeams[i].Name}
 		}
 	case "opsgenie":
-		ogService := svc.(*opsgenie.Service)
+		ogService, ok := svc.(*opsgenie.Service)
+		if !ok {
+			log.Fatalf("Expected *opsgenie.Service but got unexpected type")
+		}
 		ogTeams, err := ogService.ListTeams(ctx)
 		if err != nil {
 			log.Fatalf("Failed to list teams: %v", err)
@@ -226,7 +232,10 @@ func runImport(
 		// Fetch batch based on service type
 		switch serviceName {
 		case "pagerduty":
-			pdService := svc.(*pagerduty.Service)
+			pdService, ok := svc.(*pagerduty.Service)
+			if !ok {
+				return fmt.Errorf("expected *pagerduty.Service but got unexpected type")
+			}
 			opts := pagerduty.HistoricalFetchOptions{
 				Since:   since,
 				Until:   until,
@@ -236,7 +245,10 @@ func runImport(
 			}
 			alerts, hasMore, err = pdService.FetchHistoricalIncidents(ctx, opts)
 		case "opsgenie":
-			ogService := svc.(*opsgenie.Service)
+			ogService, ok := svc.(*opsgenie.Service)
+			if !ok {
+				return fmt.Errorf("expected *opsgenie.Service but got unexpected type")
+			}
 			opts := opsgenie.HistoricalFetchOptions{
 				Since:   since,
 				Until:   until,

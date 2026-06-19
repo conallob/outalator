@@ -72,18 +72,21 @@ type ReactionAddedEvent struct {
 // HandleEvent processes incoming Slack events
 func (b *Bot) HandleEvent(w http.ResponseWriter, r *http.Request) {
 	// Read body for verification
-	body := new(bytes.Buffer)
-	body.ReadFrom(r.Body)
-	r.Body = io.NopCloser(bytes.NewBuffer(body.Bytes()))
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	// Verify request signature
-	if !b.client.VerifyRequest(r, body.Bytes()) {
+	if !b.client.VerifyRequest(r, bodyBytes) {
 		http.Error(w, "Invalid signature", http.StatusUnauthorized)
 		return
 	}
 
 	// Restore body for decoding
-	r.Body = io.NopCloser(bytes.NewBuffer(body.Bytes()))
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	var event SlackEvent
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
@@ -95,7 +98,7 @@ func (b *Bot) HandleEvent(w http.ResponseWriter, r *http.Request) {
 	// Handle URL verification challenge
 	if event.Type == "url_verification" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"challenge": event.Challenge,
 		})
 		return
@@ -163,13 +166,13 @@ func (b *Bot) handleNoteCommand(ctx context.Context, msg MessageEvent) {
 	matches := pattern.FindStringSubmatch(msg.Text)
 
 	if len(matches) != 3 {
-		b.sendMessage(msg.Channel, "Invalid format. Use: `note <outage_id> <content>`")
+		_ = b.sendMessage(msg.Channel, "Invalid format. Use: `note <outage_id> <content>`")
 		return
 	}
 
 	outageID, err := uuid.Parse(matches[1])
 	if err != nil {
-		b.sendMessage(msg.Channel, fmt.Sprintf("Invalid outage ID: %v", err))
+		_ = b.sendMessage(msg.Channel, fmt.Sprintf("Invalid outage ID: %v", err))
 		return
 	}
 
@@ -186,11 +189,11 @@ func (b *Bot) handleNoteCommand(ctx context.Context, msg MessageEvent) {
 
 	note, err := b.service.AddNote(ctx, outageID, req)
 	if err != nil {
-		b.sendMessage(msg.Channel, fmt.Sprintf("Error adding note: %v", err))
+		_ = b.sendMessage(msg.Channel, fmt.Sprintf("Error adding note: %v", err))
 		return
 	}
 
-	b.sendMessage(msg.Channel, fmt.Sprintf("✅ Added note to outage %s (Note ID: %s)", outageID, note.ID))
+	_ = b.sendMessage(msg.Channel, fmt.Sprintf("✅ Added note to outage %s (Note ID: %s)", outageID, note.ID))
 }
 
 // handleOutageCommand processes the "outage" command
@@ -198,7 +201,7 @@ func (b *Bot) handleOutageCommand(ctx context.Context, msg MessageEvent) {
 	// Parse: "outage <title> | <description> | <severity>"
 	parts := strings.Split(strings.TrimPrefix(msg.Text, "outage "), "|")
 	if len(parts) != 3 {
-		b.sendMessage(msg.Channel, "Invalid format. Use: `outage <title> | <description> | <severity>`")
+		_ = b.sendMessage(msg.Channel, "Invalid format. Use: `outage <title> | <description> | <severity>`")
 		return
 	}
 
@@ -215,7 +218,7 @@ func (b *Bot) handleOutageCommand(ctx context.Context, msg MessageEvent) {
 	}
 
 	if !validSeverities[severity] {
-		b.sendMessage(msg.Channel, "Invalid severity. Use: critical, high, medium, or low")
+		_ = b.sendMessage(msg.Channel, "Invalid severity. Use: critical, high, medium, or low")
 		return
 	}
 
@@ -231,11 +234,11 @@ func (b *Bot) handleOutageCommand(ctx context.Context, msg MessageEvent) {
 
 	outage, err := b.service.CreateOutage(ctx, req)
 	if err != nil {
-		b.sendMessage(msg.Channel, fmt.Sprintf("Error creating outage: %v", err))
+		_ = b.sendMessage(msg.Channel, fmt.Sprintf("Error creating outage: %v", err))
 		return
 	}
 
-	b.sendMessage(msg.Channel, fmt.Sprintf("✅ Created outage: %s (ID: %s, Severity: %s)", outage.Title, outage.ID, outage.Severity))
+	_ = b.sendMessage(msg.Channel, fmt.Sprintf("✅ Created outage: %s (ID: %s, Severity: %s)", outage.Title, outage.ID, outage.Severity))
 }
 
 // handleReactionAdded processes emoji reactions
@@ -265,7 +268,7 @@ func (b *Bot) handleReactionAdded(ctx context.Context, eventData json.RawMessage
 
 	if len(matches) < 2 {
 		// If no outage ID found in message, send a helpful message
-		b.sendMessage(reaction.Item.Channel, fmt.Sprintf("<@%s> Please include the outage ID in your message. Format: `outage <outage_id>`", reaction.User))
+		_ = b.sendMessage(reaction.Item.Channel, fmt.Sprintf("<@%s> Please include the outage ID in your message. Format: `outage <outage_id>`", reaction.User))
 		return
 	}
 
@@ -288,12 +291,12 @@ func (b *Bot) handleReactionAdded(ctx context.Context, eventData json.RawMessage
 	note, err := b.service.AddNote(ctx, outageID, req)
 	if err != nil {
 		log.Printf("Error adding note from reaction: %v", err)
-		b.sendMessage(reaction.Item.Channel, fmt.Sprintf("Error adding note: %v", err))
+		_ = b.sendMessage(reaction.Item.Channel, fmt.Sprintf("Error adding note: %v", err))
 		return
 	}
 
 	// React to confirm
-	b.addReaction(reaction.Item.Channel, reaction.Item.TS, "white_check_mark")
+	_ = b.addReaction(reaction.Item.Channel, reaction.Item.TS, "white_check_mark")
 	log.Printf("Added note %s to outage %s from reaction by %s", note.ID, outageID, author)
 }
 

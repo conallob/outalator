@@ -342,6 +342,6 @@ func (s *Service) WebhookHandler() interface{} {
 		// OpsGenie webhook implementation
 		// This would parse the webhook payload and return structured data
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "received"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "received"})
 	})
 }

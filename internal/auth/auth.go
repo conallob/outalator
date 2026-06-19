@@ -97,7 +97,10 @@ func (a *Authenticator) LoginHandler() http.HandlerFunc {
 
 		session, _ := a.store.Get(r, sessionName)
 		session.Values["state"] = state
-		session.Save(r, w)
+		if err := session.Save(r, w); err != nil {
+			http.Error(w, "Failed to save session", http.StatusInternalServerError)
+			return
+		}
 
 		http.Redirect(w, r, a.oauth2Config.AuthCodeURL(state), http.StatusFound)
 	}
@@ -165,7 +168,10 @@ func (a *Authenticator) LogoutHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := a.store.Get(r, sessionName)
 		session.Options.MaxAge = -1
-		session.Save(r, w)
+		if err := session.Save(r, w); err != nil {
+			http.Error(w, "Failed to save session", http.StatusInternalServerError)
+			return
+		}
 
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
