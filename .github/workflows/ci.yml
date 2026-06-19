@@ -24,15 +24,17 @@ jobs:
         # - cmd/outalator: imports internal/grpc, so it fails transitively
         # Run `make proto` locally to generate the code and test these packages.
         run: |
-          PKGS=$(go list ./... 2>/dev/null | grep -v '/grpc' | grep -v '/api/proto' | grep -v 'cmd/outalator')
+          PKGS=$(go list ./... | grep -v '/grpc' | grep -v '/api/proto' | grep -v 'cmd/outalator')
           go test -v -race -coverprofile=coverage.out -covermode=atomic $PKGS
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v5
         with:
           files: coverage.out
           flags: unit
           token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
 
   test-sqlite:
     name: Tests (SQLite)
@@ -46,6 +48,8 @@ jobs:
           cache: true
 
       - name: Run SQLite storage tests
+        # Scope is intentionally limited to ./internal/storage/sqlite/... today.
+        # Broaden this pattern if other -tags sqlite packages are added.
         run: |
           go test -v -race -tags sqlite \
             -coverprofile=coverage-sqlite.out \
@@ -53,11 +57,13 @@ jobs:
             ./internal/storage/sqlite/...
 
       - name: Upload SQLite coverage to Codecov
-        uses: codecov/codecov-action@v4
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v5
         with:
           files: coverage-sqlite.out
           flags: sqlite
           token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
 
   lint:
     name: Lint
@@ -72,9 +78,14 @@ jobs:
 
       - name: go vet
         run: |
-          PKGS=$(go list ./... 2>/dev/null | grep -v '/grpc' | grep -v '/api/proto' | grep -v 'cmd/outalator')
+          PKGS=$(go list ./... | grep -v '/grpc' | grep -v '/api/proto' | grep -v 'cmd/outalator')
           go vet $PKGS
 
       - name: go vet (SQLite)
         run: |
           go vet -tags sqlite ./internal/storage/sqlite/...
+
+      - name: Check go.mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
