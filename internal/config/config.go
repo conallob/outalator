@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -94,7 +95,9 @@ func Load(path string) (*Config, error) {
 		cfg.Server.Host = host
 	}
 	if port := os.Getenv("SERVER_PORT"); port != "" {
-		_, _ = fmt.Sscanf(port, "%d", &cfg.Server.Port)
+		if _, err := fmt.Sscanf(port, "%d", &cfg.Server.Port); err != nil {
+			log.Printf("config: invalid SERVER_PORT %q, using default: %v", port, err)
+		}
 	}
 
 	// gRPC configuration
@@ -105,7 +108,9 @@ func Load(path string) (*Config, error) {
 		cfg.GRPC.Host = host
 	}
 	if port := os.Getenv("GRPC_PORT"); port != "" {
-		_, _ = fmt.Sscanf(port, "%d", &cfg.GRPC.Port)
+		if _, err := fmt.Sscanf(port, "%d", &cfg.GRPC.Port); err != nil {
+			log.Printf("config: invalid GRPC_PORT %q, using default: %v", port, err)
+		}
 	}
 
 	if dbDriver := os.Getenv("DB_DRIVER"); dbDriver != "" {
@@ -118,7 +123,9 @@ func Load(path string) (*Config, error) {
 		cfg.Database.Host = dbHost
 	}
 	if dbPort := os.Getenv("DB_PORT"); dbPort != "" {
-		_, _ = fmt.Sscanf(dbPort, "%d", &cfg.Database.Port)
+		if _, err := fmt.Sscanf(dbPort, "%d", &cfg.Database.Port); err != nil {
+			log.Printf("config: invalid DB_PORT %q, using default: %v", dbPort, err)
+		}
 	}
 	if dbUser := os.Getenv("DB_USER"); dbUser != "" {
 		cfg.Database.User = dbUser

@@ -174,8 +174,8 @@ func (b *Bot) handleNoteCommand(ctx context.Context, msg MessageEvent) {
 
 	outageID, err := uuid.Parse(matches[1])
 	if err != nil {
-		if err2 := b.sendMessage(msg.Channel, fmt.Sprintf("Invalid outage ID: %v", err)); err2 != nil {
-			log.Printf("slack: failed to send message: %v", err2)
+		if sendErr := b.sendMessage(msg.Channel, fmt.Sprintf("Invalid outage ID: %v", err)); sendErr != nil {
+			log.Printf("slack: failed to send message: %v", sendErr)
 		}
 		return
 	}
@@ -193,8 +193,8 @@ func (b *Bot) handleNoteCommand(ctx context.Context, msg MessageEvent) {
 
 	note, err := b.service.AddNote(ctx, outageID, req)
 	if err != nil {
-		if err2 := b.sendMessage(msg.Channel, fmt.Sprintf("Error adding note: %v", err)); err2 != nil {
-			log.Printf("slack: failed to send message: %v", err2)
+		if sendErr := b.sendMessage(msg.Channel, fmt.Sprintf("Error adding note: %v", err)); sendErr != nil {
+			log.Printf("slack: failed to send message: %v", sendErr)
 		}
 		return
 	}
@@ -246,8 +246,8 @@ func (b *Bot) handleOutageCommand(ctx context.Context, msg MessageEvent) {
 
 	outage, err := b.service.CreateOutage(ctx, req)
 	if err != nil {
-		if err2 := b.sendMessage(msg.Channel, fmt.Sprintf("Error creating outage: %v", err)); err2 != nil {
-			log.Printf("slack: failed to send message: %v", err2)
+		if sendErr := b.sendMessage(msg.Channel, fmt.Sprintf("Error creating outage: %v", err)); sendErr != nil {
+			log.Printf("slack: failed to send message: %v", sendErr)
 		}
 		return
 	}
@@ -309,8 +309,8 @@ func (b *Bot) handleReactionAdded(ctx context.Context, eventData json.RawMessage
 	note, err := b.service.AddNote(ctx, outageID, req)
 	if err != nil {
 		log.Printf("Error adding note from reaction: %v", err)
-		if err2 := b.sendMessage(reaction.Item.Channel, fmt.Sprintf("Error adding note: %v", err)); err2 != nil {
-			log.Printf("slack: failed to send message: %v", err2)
+		if sendErr := b.sendMessage(reaction.Item.Channel, fmt.Sprintf("Error adding note: %v", err)); sendErr != nil {
+			log.Printf("slack: failed to send message: %v", sendErr)
 		}
 		return
 	}

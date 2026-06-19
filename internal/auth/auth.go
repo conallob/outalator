@@ -95,7 +95,11 @@ func (a *Authenticator) LoginHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state := generateRandomState()
 
-		session, _ := a.store.Get(r, sessionName)
+		session, err := a.store.Get(r, sessionName)
+		if err != nil {
+			http.Error(w, "Failed to get session", http.StatusInternalServerError)
+			return
+		}
 		session.Values["state"] = state
 		if err := session.Save(r, w); err != nil {
 			http.Error(w, "Failed to save session", http.StatusInternalServerError)
@@ -166,7 +170,11 @@ func (a *Authenticator) CallbackHandler() http.HandlerFunc {
 // LogoutHandler handles user logout
 func (a *Authenticator) LogoutHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, _ := a.store.Get(r, sessionName)
+		session, err := a.store.Get(r, sessionName)
+		if err != nil {
+			http.Error(w, "Failed to get session", http.StatusInternalServerError)
+			return
+		}
 		session.Options.MaxAge = -1
 		if err := session.Save(r, w); err != nil {
 			http.Error(w, "Failed to save session", http.StatusInternalServerError)
