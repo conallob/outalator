@@ -22,15 +22,17 @@ jobs:
           cache: true
 
       - name: Run tests
-        # Exclude packages that depend on generated proto code (not committed).
-        # - internal/grpc: directly imports the generated package
-        # - cmd/outalator: imports internal/grpc, so it fails transitively
-        # Run `make proto` locally to generate the code and test these packages.
+        # Packages that depend on generated proto code (not committed) are
+        # excluded via `make list-testable-pkgs`. Run `make proto` locally
+        # to generate the code and test those packages.
         run: |
-          PKGS=$(go list ./... | grep -v 'internal/grpc$' | grep -v '/api/proto' | grep -v 'cmd/outalator')
+          PKGS=$(make list-testable-pkgs)
           go test -v -race -coverprofile=coverage.out -covermode=atomic $PKGS
 
       - name: Upload coverage to Codecov
+        # The `if` guard handles fork PRs where secrets are not exposed.
+        # `continue-on-error` handles the case where the token is unset or
+        # the Codecov service is unavailable, keeping CI green regardless.
         if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
@@ -60,6 +62,9 @@ jobs:
             ./internal/storage/sqlite/...
 
       - name: Upload SQLite coverage to Codecov
+        # The `if` guard handles fork PRs where secrets are not exposed.
+        # `continue-on-error` handles the case where the token is unset or
+        # the Codecov service is unavailable, keeping CI green regardless.
         if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
@@ -81,7 +86,7 @@ jobs:
 
       - name: go vet
         run: |
-          PKGS=$(go list ./... | grep -v 'internal/grpc$' | grep -v '/api/proto' | grep -v 'cmd/outalator')
+          PKGS=$(make list-testable-pkgs)
           go vet $PKGS
 
       - name: go vet (SQLite)
