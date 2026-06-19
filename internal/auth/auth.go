@@ -120,7 +120,9 @@ func (a *Authenticator) CallbackHandler() http.HandlerFunc {
 			log.Printf("auth: failed to decode session cookie (using fresh session): %v", err)
 		}
 
-		// Verify state
+		// Verify state. If the session was freshly created above (decode error),
+		// Values["state"] will be absent and this check will return 400 — the user
+		// will need to restart the login flow, which is the correct outcome.
 		savedState, ok := session.Values["state"].(string)
 		if !ok || savedState != r.URL.Query().Get("state") {
 			http.Error(w, "Invalid state parameter", http.StatusBadRequest)

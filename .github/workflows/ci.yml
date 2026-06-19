@@ -110,7 +110,9 @@ jobs:
         # used to generate the committed .pb.go files (see api/proto/v1/ headers).
         # Using apt rather than a manual GitHub release download avoids network
         # policy restrictions on binary asset URLs in CI.
-        run: sudo apt-get install -y protobuf-compiler
+        run: |
+          sudo apt-get install -y protobuf-compiler
+          protoc --version | grep -q 'libprotoc 3.21.12' || { echo "unexpected protoc version: $(protoc --version)"; exit 1; }
 
       - name: Check proto files are up to date
         # Detects edits to outalator.proto that were not followed by `make proto`.
