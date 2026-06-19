@@ -28,10 +28,7 @@ jobs:
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload coverage to Codecov
-        # The `if` guard handles fork PRs where secrets are not exposed.
-        # `continue-on-error` handles the case where the token is unset or
-        # the Codecov service is unavailable, keeping CI green regardless.
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        # continue-on-error handles fork PRs (no secrets) and Codecov downtime.
         uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3  # v5.3.1
         with:
           files: coverage.out
@@ -60,10 +57,7 @@ jobs:
             ./internal/storage/sqlite/...
 
       - name: Upload SQLite coverage to Codecov
-        # The `if` guard handles fork PRs where secrets are not exposed.
-        # `continue-on-error` handles the case where the token is unset or
-        # the Codecov service is unavailable, keeping CI green regardless.
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        # continue-on-error handles fork PRs (no secrets) and Codecov downtime.
         uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3  # v5.3.1
         with:
           files: coverage-sqlite.out
