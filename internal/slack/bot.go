@@ -166,13 +166,17 @@ func (b *Bot) handleNoteCommand(ctx context.Context, msg MessageEvent) {
 	matches := pattern.FindStringSubmatch(msg.Text)
 
 	if len(matches) != 3 {
-		_ = b.sendMessage(msg.Channel, "Invalid format. Use: `note <outage_id> <content>`")
+		if err := b.sendMessage(msg.Channel, "Invalid format. Use: `note <outage_id> <content>`"); err != nil {
+			log.Printf("slack: failed to send message: %v", err)
+		}
 		return
 	}
 
 	outageID, err := uuid.Parse(matches[1])
 	if err != nil {
-		_ = b.sendMessage(msg.Channel, fmt.Sprintf("Invalid outage ID: %v", err))
+		if err2 := b.sendMessage(msg.Channel, fmt.Sprintf("Invalid outage ID: %v", err)); err2 != nil {
+			log.Printf("slack: failed to send message: %v", err2)
+		}
 		return
 	}
 
@@ -189,11 +193,15 @@ func (b *Bot) handleNoteCommand(ctx context.Context, msg MessageEvent) {
 
 	note, err := b.service.AddNote(ctx, outageID, req)
 	if err != nil {
-		_ = b.sendMessage(msg.Channel, fmt.Sprintf("Error adding note: %v", err))
+		if err2 := b.sendMessage(msg.Channel, fmt.Sprintf("Error adding note: %v", err)); err2 != nil {
+			log.Printf("slack: failed to send message: %v", err2)
+		}
 		return
 	}
 
-	_ = b.sendMessage(msg.Channel, fmt.Sprintf("✅ Added note to outage %s (Note ID: %s)", outageID, note.ID))
+	if err := b.sendMessage(msg.Channel, fmt.Sprintf("✅ Added note to outage %s (Note ID: %s)", outageID, note.ID)); err != nil {
+		log.Printf("slack: failed to send message: %v", err)
+	}
 }
 
 // handleOutageCommand processes the "outage" command
@@ -201,7 +209,9 @@ func (b *Bot) handleOutageCommand(ctx context.Context, msg MessageEvent) {
 	// Parse: "outage <title> | <description> | <severity>"
 	parts := strings.Split(strings.TrimPrefix(msg.Text, "outage "), "|")
 	if len(parts) != 3 {
-		_ = b.sendMessage(msg.Channel, "Invalid format. Use: `outage <title> | <description> | <severity>`")
+		if err := b.sendMessage(msg.Channel, "Invalid format. Use: `outage <title> | <description> | <severity>`"); err != nil {
+			log.Printf("slack: failed to send message: %v", err)
+		}
 		return
 	}
 
@@ -218,7 +228,9 @@ func (b *Bot) handleOutageCommand(ctx context.Context, msg MessageEvent) {
 	}
 
 	if !validSeverities[severity] {
-		_ = b.sendMessage(msg.Channel, "Invalid severity. Use: critical, high, medium, or low")
+		if err := b.sendMessage(msg.Channel, "Invalid severity. Use: critical, high, medium, or low"); err != nil {
+			log.Printf("slack: failed to send message: %v", err)
+		}
 		return
 	}
 
@@ -234,11 +246,15 @@ func (b *Bot) handleOutageCommand(ctx context.Context, msg MessageEvent) {
 
 	outage, err := b.service.CreateOutage(ctx, req)
 	if err != nil {
-		_ = b.sendMessage(msg.Channel, fmt.Sprintf("Error creating outage: %v", err))
+		if err2 := b.sendMessage(msg.Channel, fmt.Sprintf("Error creating outage: %v", err)); err2 != nil {
+			log.Printf("slack: failed to send message: %v", err2)
+		}
 		return
 	}
 
-	_ = b.sendMessage(msg.Channel, fmt.Sprintf("✅ Created outage: %s (ID: %s, Severity: %s)", outage.Title, outage.ID, outage.Severity))
+	if err := b.sendMessage(msg.Channel, fmt.Sprintf("✅ Created outage: %s (ID: %s, Severity: %s)", outage.Title, outage.ID, outage.Severity)); err != nil {
+		log.Printf("slack: failed to send message: %v", err)
+	}
 }
 
 // handleReactionAdded processes emoji reactions
@@ -268,7 +284,9 @@ func (b *Bot) handleReactionAdded(ctx context.Context, eventData json.RawMessage
 
 	if len(matches) < 2 {
 		// If no outage ID found in message, send a helpful message
-		_ = b.sendMessage(reaction.Item.Channel, fmt.Sprintf("<@%s> Please include the outage ID in your message. Format: `outage <outage_id>`", reaction.User))
+		if err := b.sendMessage(reaction.Item.Channel, fmt.Sprintf("<@%s> Please include the outage ID in your message. Format: `outage <outage_id>`", reaction.User)); err != nil {
+			log.Printf("slack: failed to send message: %v", err)
+		}
 		return
 	}
 
@@ -291,12 +309,16 @@ func (b *Bot) handleReactionAdded(ctx context.Context, eventData json.RawMessage
 	note, err := b.service.AddNote(ctx, outageID, req)
 	if err != nil {
 		log.Printf("Error adding note from reaction: %v", err)
-		_ = b.sendMessage(reaction.Item.Channel, fmt.Sprintf("Error adding note: %v", err))
+		if err2 := b.sendMessage(reaction.Item.Channel, fmt.Sprintf("Error adding note: %v", err)); err2 != nil {
+			log.Printf("slack: failed to send message: %v", err2)
+		}
 		return
 	}
 
 	// React to confirm
-	_ = b.addReaction(reaction.Item.Channel, reaction.Item.TS, "white_check_mark")
+	if err := b.addReaction(reaction.Item.Channel, reaction.Item.TS, "white_check_mark"); err != nil {
+		log.Printf("slack: failed to add reaction: %v", err)
+	}
 	log.Printf("Added note %s to outage %s from reaction by %s", note.ID, outageID, author)
 }
 

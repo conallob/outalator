@@ -75,7 +75,7 @@ func (s *PostgresStorage) ListTagsByOutage(ctx context.Context, outageID uuid.UU
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tags: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tags []*domain.Tag
 	for rows.Next() {
@@ -135,7 +135,7 @@ func (s *PostgresStorage) FindOutagesByTag(ctx context.Context, key, value strin
 	if err != nil {
 		return nil, fmt.Errorf("failed to find outages by tag: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var outages []*domain.Outage
 	for rows.Next() {

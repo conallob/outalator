@@ -184,7 +184,7 @@ func (s *Server) ListOutages(ctx context.Context, req *pb.ListOutagesRequest) (*
 		Outages: pbOutages,
 		Limit:   req.Limit,
 		Offset:  req.Offset,
-		Total:   int32(len(pbOutages)), //nolint:gosec // list length cannot realistically exceed int32 max
+		Total:   int32(len(pbOutages)), //nolint:gosec // list length cannot realistically exceed int32 max; TODO: return actual total count from storage
 	}, nil
 }
 
