@@ -9,12 +9,19 @@ grpc:
   port: 9090
 
 database:
+  # driver selects the storage backend. Supported values:
+  #   "postgres" (default) — production backend; requires PostgreSQL
+  #   "sqlite"             — local testing only; build with: go build -tags sqlite
+  driver: postgres
   host: localhost
   port: 5432
   user: outalator
   password: outalator
   dbname: outalator
   sslmode: disable
+  # path is only used when driver is "sqlite". Defaults to "outalator.db".
+  # Use ":memory:" for an ephemeral in-process database.
+  # path: outalator.db
 
 # Optional: Configure OIDC authentication (Okta, Auth0, Google, etc.)
 # auth:

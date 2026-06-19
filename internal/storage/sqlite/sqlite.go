@@ -82,6 +82,8 @@ func New(ctx context.Context, path string) (*SQLiteStorage, error) {
 
 // buildDSN appends the _pragma=foreign_keys(ON) query parameter so that every
 // new pool connection has foreign-key enforcement enabled.
+// The _pragma=... syntax is specific to modernc.org/sqlite; if the driver is
+// ever swapped, this DSN format will need revisiting.
 func buildDSN(path string) string {
 	pragma := "_pragma=foreign_keys(ON)"
 	if path == ":memory:" {
@@ -102,9 +104,19 @@ func buildDSN(path string) string {
 }
 
 // migrate runs the embedded schema DDL (idempotent CREATE IF NOT EXISTS).
+// Statements are executed one at a time because database/sql's ExecContext does
+// not guarantee multi-statement support across all drivers.
 func (s *SQLiteStorage) migrate(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, schema)
-	return err
+	for _, stmt := range strings.Split(schema, ";") {
+		stmt = strings.TrimSpace(stmt)
+		if stmt == "" {
+			continue
+		}
+		if _, err := s.db.ExecContext(ctx, stmt); err != nil {
+			return fmt.Errorf("schema migration: %w", err)
+		}
+	}
+	return nil
 }
 
 // Close closes the database connection.

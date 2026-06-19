@@ -13,6 +13,8 @@ import (
 
 // New creates a Storage instance based on cfg.Driver.
 // "postgres" is the production backend; "sqlite" is for local testing.
+// Both drivers are compiled into the binary when -tags sqlite is used, so
+// operators can switch between them via config without rebuilding.
 func New(ctx context.Context, cfg config.DatabaseConfig) (Storage, error) {
 	switch cfg.Driver {
 	case DriverSQLite:

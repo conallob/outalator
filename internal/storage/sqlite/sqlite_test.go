@@ -9,9 +9,13 @@ import (
 	"time"
 
 	"github.com/conall/outalator/internal/domain"
+	"github.com/conall/outalator/internal/storage"
 	"github.com/conall/outalator/internal/storage/sqlite"
 	"github.com/google/uuid"
 )
+
+// Compile-time check: SQLiteStorage must satisfy the storage.Storage interface.
+var _ storage.Storage = (*sqlite.SQLiteStorage)(nil)
 
 // newStore opens a fresh in-memory database for each test.
 func newStore(t *testing.T) *sqlite.SQLiteStorage {
@@ -588,6 +592,12 @@ func TestOutage_NilMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetOutage: %v", err)
 	}
-	// Nil metadata should round-trip as an empty (or nil) map, not cause an error.
-	_ = got
+	// A nil Metadata map is stored as '{}' and deserializes back as an empty
+	// (non-nil) map — callers should not rely on nil identity after a round-trip.
+	if got.Metadata == nil {
+		t.Error("Metadata: expected empty map after nil round-trip, got nil")
+	}
+	if len(got.Metadata) != 0 {
+		t.Errorf("Metadata: expected empty map, got %v", got.Metadata)
+	}
 }

@@ -13,6 +13,8 @@ import (
 // New creates a Storage instance based on cfg.Driver.
 // By default only "postgres" is supported. Build with -tags sqlite to also
 // enable "sqlite".
+// ctx is accepted for API symmetry with the sqlite factory but is not used
+// here: postgres.NewStorage establishes its connection lazily via database/sql.
 func New(_ context.Context, cfg config.DatabaseConfig) (Storage, error) {
 	switch cfg.Driver {
 	case DriverSQLite:
