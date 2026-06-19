@@ -96,7 +96,7 @@ func Load(path string) (*Config, error) {
 	}
 	if port := os.Getenv("SERVER_PORT"); port != "" {
 		if _, err := fmt.Sscanf(port, "%d", &cfg.Server.Port); err != nil {
-			log.Printf("config: invalid SERVER_PORT %q, using default: %v", port, err)
+			log.Printf("config: invalid SERVER_PORT value, using default: %v", err)
 		}
 	}
 
@@ -109,7 +109,7 @@ func Load(path string) (*Config, error) {
 	}
 	if port := os.Getenv("GRPC_PORT"); port != "" {
 		if _, err := fmt.Sscanf(port, "%d", &cfg.GRPC.Port); err != nil {
-			log.Printf("config: invalid GRPC_PORT %q, using default: %v", port, err)
+			log.Printf("config: invalid GRPC_PORT value, using default: %v", err)
 		}
 	}
 
@@ -124,7 +124,7 @@ func Load(path string) (*Config, error) {
 	}
 	if dbPort := os.Getenv("DB_PORT"); dbPort != "" {
 		if _, err := fmt.Sscanf(dbPort, "%d", &cfg.Database.Port); err != nil {
-			log.Printf("config: invalid DB_PORT %q, using default: %v", dbPort, err)
+			log.Printf("config: invalid DB_PORT value, using default: %v", err)
 		}
 	}
 	if dbUser := os.Getenv("DB_USER"); dbUser != "" {

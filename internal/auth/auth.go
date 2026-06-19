@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -97,8 +98,9 @@ func (a *Authenticator) LoginHandler() http.HandlerFunc {
 
 		session, err := a.store.Get(r, sessionName)
 		if err != nil {
-			http.Error(w, "Failed to get session", http.StatusInternalServerError)
-			return
+			// gorilla/sessions returns a valid fresh session alongside a decode error
+			// (e.g. expired or rotated secret). Log and continue rather than returning 500.
+			log.Printf("auth: failed to decode session cookie (using fresh session): %v", err)
 		}
 		session.Values["state"] = state
 		if err := session.Save(r, w); err != nil {
@@ -115,8 +117,7 @@ func (a *Authenticator) CallbackHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := a.store.Get(r, sessionName)
 		if err != nil {
-			http.Error(w, "Failed to get session", http.StatusInternalServerError)
-			return
+			log.Printf("auth: failed to decode session cookie (using fresh session): %v", err)
 		}
 
 		// Verify state
@@ -172,8 +173,7 @@ func (a *Authenticator) LogoutHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := a.store.Get(r, sessionName)
 		if err != nil {
-			http.Error(w, "Failed to get session", http.StatusInternalServerError)
-			return
+			log.Printf("auth: failed to decode session cookie (using fresh session): %v", err)
 		}
 		session.Options.MaxAge = -1
 		if err := session.Save(r, w); err != nil {
