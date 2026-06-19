@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Tests
@@ -24,7 +27,7 @@ jobs:
         # - cmd/outalator: imports internal/grpc, so it fails transitively
         # Run `make proto` locally to generate the code and test these packages.
         run: |
-          PKGS=$(go list ./... | grep -v '/grpc' | grep -v '/api/proto' | grep -v 'cmd/outalator')
+          PKGS=$(go list ./... | grep -v 'internal/grpc$' | grep -v '/api/proto' | grep -v 'cmd/outalator')
           go test -v -race -coverprofile=coverage.out -covermode=atomic $PKGS
 
       - name: Upload coverage to Codecov
@@ -78,7 +81,7 @@ jobs:
 
       - name: go vet
         run: |
-          PKGS=$(go list ./... | grep -v '/grpc' | grep -v '/api/proto' | grep -v 'cmd/outalator')
+          PKGS=$(go list ./... | grep -v 'internal/grpc$' | grep -v '/api/proto' | grep -v 'cmd/outalator')
           go vet $PKGS
 
       - name: go vet (SQLite)
@@ -86,6 +89,9 @@ jobs:
           go vet -tags sqlite ./internal/storage/sqlite/...
 
       - name: Check go.mod tidy
+        # Must use GOFLAGS="-tags=sqlite" so modernc.org/sqlite (only imported
+        # behind the sqlite build tag) is not stripped from go.mod by tidy.
+        # A plain `go mod tidy` would always produce a diff and fail this step.
         run: |
-          go mod tidy
+          GOFLAGS="-tags=sqlite" go mod tidy
           git diff --exit-code go.mod go.sum
