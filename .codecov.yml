@@ -1,0 +1,4 @@
+coverage:
+  ignore:
+    # Generated protobuf files; coverage here is noise, not signal.
+    - "api/proto/v1/*.pb.go"
