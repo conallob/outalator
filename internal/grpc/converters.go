@@ -110,9 +110,9 @@ func copyStringMap(m map[string]string) map[string]string {
 // domain source/metadata pair. The generated isAlert_SourceMetadata interface
 // is unexported, so we must set the field directly rather than returning the
 // interface value from a helper.
-func setSourceMetadata(pbAlert *pb.Alert, source string, metadata map[string]any) error {
+func setSourceMetadata(pbAlert *pb.Alert, source string, metadata map[string]any) {
 	if metadata == nil {
-		return nil
+		return
 	}
 
 	switch source {
@@ -175,14 +175,13 @@ func setSourceMetadata(pbAlert *pb.Alert, source string, metadata map[string]any
 		}
 		pbAlert.SourceMetadata = &pb.Alert_Generic{Generic: &pb.GenericMetadata{Properties: props}}
 	}
-	return nil
 }
 
 // protoToSourceMetadata converts the source_metadata oneof field of a pb.Alert
 // to a domain map. Accepts *pb.Alert (not the unexported isAlert_SourceMetadata
 // interface) so the caller can type-switch on the exported concrete types.
 func protoToSourceMetadata(pbAlert *pb.Alert) map[string]any {
-	if pbAlert == nil {
+	if pbAlert == nil || pbAlert.SourceMetadata == nil {
 		return nil
 	}
 
@@ -363,9 +362,7 @@ func AlertDomainToProto(a *domain.Alert) (*pb.Alert, error) {
 		Metadata:       copyStringMap(a.Metadata),
 		CustomFields:   customFields,
 	}
-	if err := setSourceMetadata(pbAlert, a.Source, a.SourceMetadata); err != nil {
-		return nil, fmt.Errorf("failed to convert source_metadata: %w", err)
-	}
+	setSourceMetadata(pbAlert, a.Source, a.SourceMetadata)
 	return pbAlert, nil
 }
 

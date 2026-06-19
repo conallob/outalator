@@ -31,6 +31,9 @@ func NewServer(svc *service.Service) *Server {
 }
 
 // Start begins listening on addr and blocks until the server is stopped.
+// The server is created without TLS; wire up grpc.Creds for production use.
+// s.grpcServer is set before Serve is called; Stop may be called concurrently
+// once Serve is running because GracefulStop is thread-safe.
 func (s *Server) Start(addr string) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -44,14 +47,19 @@ func (s *Server) Start(addr string) error {
 	return nil
 }
 
-// Stop performs a graceful shutdown of the gRPC server.
+// Stop performs a graceful shutdown of the gRPC server started by Start.
+// It has no effect when called on a Server that was not started via Start
+// (e.g., one whose services were registered via RegisterServices onto an
+// externally managed *grpc.Server).
 func (s *Server) Stop() {
 	if s.grpcServer != nil {
 		s.grpcServer.GracefulStop()
 	}
 }
 
-// RegisterServices registers all gRPC services with the gRPC server
+// RegisterServices registers all gRPC services with an externally managed
+// *grpc.Server. Use this when the caller controls the server lifecycle.
+// Use Start/Stop instead when this struct should own the lifecycle.
 func (s *Server) RegisterServices(grpcServer *grpc.Server) {
 	pb.RegisterOutageServiceServer(grpcServer, s)
 	pb.RegisterNoteServiceServer(grpcServer, s)

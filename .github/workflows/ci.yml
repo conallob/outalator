@@ -97,3 +97,14 @@ jobs:
         run: |
           GOFLAGS="-tags=sqlite" go mod tidy
           git diff --exit-code go.mod go.sum
+
+      - name: Install protoc
+        run: sudo apt-get install -y protobuf-compiler
+
+      - name: Check proto files are up to date
+        # Detects edits to outalator.proto that were not followed by `make proto`.
+        # grpc-deps installs protoc-gen-go and protoc-gen-go-grpc.
+        run: |
+          make grpc-deps
+          make proto
+          git diff --exit-code api/proto/v1/
