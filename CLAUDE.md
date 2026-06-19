@@ -52,6 +52,16 @@ DB_DRIVER=sqlite DB_PATH=outalator.db ./outalator
 
 The SQLite schema is embedded in `internal/storage/sqlite/schema.sql` and applied automatically on first open. It is intentionally maintained separately from the Postgres migration files.
 
+**Important — Go module maintenance:**
+
+Adding `modernc.org/sqlite` requires Go 1.25.0 (the module's minimum). The `go` directive in `go.mod` reflects this for the entire module; environments on Go 1.23/1.24 will need to upgrade.
+
+Because `modernc.org/sqlite` is only imported from files with `//go:build sqlite`, a plain `go mod tidy` (without the build tag) will **remove** it from `go.mod`. Always use the tagged tidy when updating dependencies:
+
+```bash
+make tidy-sqlite   # equivalent to: go mod tidy -tags sqlite
+```
+
 ## Architecture
 
 The application follows a layered architecture:

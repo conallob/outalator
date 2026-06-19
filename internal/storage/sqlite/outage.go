@@ -110,6 +110,14 @@ func (s *SQLiteStorage) GetOutage(ctx context.Context, id uuid.UUID) (*domain.Ou
 // eagerly loaded (consistent with the postgres backend). Call GetOutage for
 // a fully-populated record.
 func (s *SQLiteStorage) ListOutages(ctx context.Context, limit, offset int) ([]*domain.Outage, error) {
+	// SQLite treats LIMIT -1 as "no limit"; clamp to 0 so callers get an empty
+	// result rather than a full table scan on a negative limit.
+	if limit < 0 {
+		limit = 0
+	}
+	if offset < 0 {
+		offset = 0
+	}
 	query := `
 		SELECT id, title, description, status, severity, created_at, updated_at, resolved_at, metadata, custom_fields
 		FROM outages

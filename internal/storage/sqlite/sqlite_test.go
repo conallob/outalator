@@ -270,6 +270,14 @@ func TestAlert_NotFound(t *testing.T) {
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("GetAlertByExternalID missing: got %v, want domain.ErrNotFound", err)
 	}
+
+	err = s.UpdateAlert(ctx, &domain.Alert{
+		ID: uuid.New(), OutageID: uuid.New(),
+		TriggeredAt: now(), CreatedAt: now(),
+	})
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("UpdateAlert missing: got %v, want domain.ErrNotFound", err)
+	}
 }
 
 func TestAlert_CascadeDeleteWithOutage(t *testing.T) {

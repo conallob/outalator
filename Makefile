@@ -1,4 +1,4 @@
-.PHONY: help proto grpc-deps build run test test-sqlite clean
+.PHONY: help proto grpc-deps build run test test-sqlite tidy-sqlite clean
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -40,6 +40,9 @@ test: ## Run tests
 
 test-sqlite: ## Run tests with SQLite backend enabled
 	@go test -v -tags sqlite ./...
+
+tidy-sqlite: ## Update go.mod/go.sum including SQLite dependencies
+	@go mod tidy -tags sqlite
 
 clean: ## Clean build artifacts
 	@rm -rf bin/

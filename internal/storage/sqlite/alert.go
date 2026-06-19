@@ -13,8 +13,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// Note: DeleteAlert is not part of the storage.AlertStorage interface and is
-// therefore not implemented here (consistent with the postgres backend).
+// Note: DeleteAlert is not part of the storage.AlertStorage interface (defined
+// in internal/storage/storage.go) and is therefore not implemented here,
+// consistent with the postgres backend.
 
 // CreateAlert creates a new alert in the database.
 func (s *SQLiteStorage) CreateAlert(ctx context.Context, alert *domain.Alert) error {

@@ -1,7 +1,11 @@
--- SQLite schema for outalator (local testing)
+-- SQLite schema for outalator (local testing).
 -- Applied automatically on startup when using the sqlite driver.
--- For production use PostgreSQL (see migrations/001_initial_schema.sql
--- and migrations/002_add_custom_fields.sql).
+-- For production use PostgreSQL instead.
+--
+-- This schema mirrors:
+--   migrations/001_initial_schema.sql
+--   migrations/002_add_custom_fields.sql
+-- Keep this file in sync when adding new PostgreSQL migration files.
 
 CREATE TABLE IF NOT EXISTS outages (
     id            TEXT PRIMARY KEY,

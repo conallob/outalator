@@ -80,27 +80,30 @@ func New(ctx context.Context, path string) (*SQLiteStorage, error) {
 	return s, nil
 }
 
-// buildDSN appends the _pragma=foreign_keys(ON) query parameter so that every
-// new pool connection has foreign-key enforcement enabled.
-// The _pragma=... syntax is specific to modernc.org/sqlite; if the driver is
-// ever swapped, this DSN format will need revisiting.
+// buildDSN builds the DSN for modernc.org/sqlite.
+// The _pragma=... query-parameter syntax is specific to this driver; swapping
+// the driver will require revisiting this format.
 func buildDSN(path string) string {
-	pragma := "_pragma=foreign_keys(ON)"
 	if path == ":memory:" {
+		// WAL mode is not supported for in-memory databases.
 		// Use mode=memory&cache=shared so that all pool connections share the
 		// same in-memory database. Without cache=shared each new connection
 		// gets its own isolated empty DB — safe with MaxOpenConns(1) today,
 		// but fragile if the cap is ever removed.
-		return "file::memory:?mode=memory&cache=shared&" + pragma
+		return "file::memory:?mode=memory&cache=shared&_pragma=foreign_keys(ON)"
 	}
+	// Enable foreign-key enforcement and WAL journal mode for file databases.
+	// WAL improves concurrent read latency and is the standard recommendation
+	// for any SQLite database accessed by more than one goroutine.
+	pragmas := "_pragma=foreign_keys(ON)&_pragma=journal_mode(WAL)"
 	if strings.HasPrefix(path, "file:") {
 		if strings.Contains(path, "?") {
-			return path + "&" + pragma
+			return path + "&" + pragmas
 		}
-		return path + "?" + pragma
+		return path + "?" + pragmas
 	}
 	// Bare file path — convert to SQLite file URI.
-	return "file:" + path + "?" + pragma
+	return "file:" + path + "?" + pragmas
 }
 
 // migrate runs the embedded schema DDL (idempotent CREATE IF NOT EXISTS).
