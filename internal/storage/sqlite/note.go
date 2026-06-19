@@ -65,7 +65,7 @@ func (s *SQLiteStorage) ListNotesByOutage(ctx context.Context, outageID uuid.UUI
 	if err != nil {
 		return nil, fmt.Errorf("failed to list notes: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var notes []*domain.Note
 	for rows.Next() {
