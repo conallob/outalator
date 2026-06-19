@@ -6,6 +6,10 @@
 --   migrations/001_initial_schema.sql
 --   migrations/002_add_custom_fields.sql
 -- Keep this file in sync when adding new PostgreSQL migration files.
+--
+-- Note: SQLite DATETIME stores timestamps with second precision. PostgreSQL
+-- stores microseconds via timestamptz. Tests truncate to the second
+-- (time.Truncate(time.Second)) to avoid spurious precision-related failures.
 
 CREATE TABLE IF NOT EXISTS outages (
     id            TEXT PRIMARY KEY,

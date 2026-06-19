@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/conall/outalator/internal/domain"
@@ -61,8 +62,8 @@ func (s *PostgresStorage) GetAlert(ctx context.Context, id uuid.UUID) (*domain.A
 		&alert.AcknowledgedAt, &alert.ResolvedAt, &alert.CreatedAt,
 		&sourceMetadataJSON, &metadataJSON, &customFieldsJSON,
 	)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("alert not found")
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("alert %s: %w", id, domain.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get alert: %w", err)
@@ -105,8 +106,8 @@ func (s *PostgresStorage) GetAlertByExternalID(ctx context.Context, externalID, 
 		&alert.AcknowledgedAt, &alert.ResolvedAt, &alert.CreatedAt,
 		&sourceMetadataJSON, &metadataJSON, &customFieldsJSON,
 	)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("alert not found")
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("alert external_id=%s source=%s: %w", externalID, source, domain.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get alert: %w", err)
@@ -223,7 +224,7 @@ func (s *PostgresStorage) UpdateAlert(ctx context.Context, alert *domain.Alert) 
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
-		return fmt.Errorf("alert not found")
+		return fmt.Errorf("alert %s: %w", alert.ID, domain.ErrNotFound)
 	}
 
 	return nil

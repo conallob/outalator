@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/conall/outalator/internal/domain"
@@ -51,8 +52,8 @@ func (s *PostgresStorage) GetOutage(ctx context.Context, id uuid.UUID) (*domain.
 		&outage.Severity, &outage.CreatedAt, &outage.UpdatedAt, &outage.ResolvedAt,
 		&metadataJSON, &customFieldsJSON,
 	)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("outage not found")
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("outage %s: %w", id, domain.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get outage: %w", err)
@@ -180,7 +181,7 @@ func (s *PostgresStorage) UpdateOutage(ctx context.Context, outage *domain.Outag
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
-		return fmt.Errorf("outage not found")
+		return fmt.Errorf("outage %s: %w", outage.ID, domain.ErrNotFound)
 	}
 
 	return nil
@@ -199,7 +200,7 @@ func (s *PostgresStorage) DeleteOutage(ctx context.Context, id uuid.UUID) error 
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
-		return fmt.Errorf("outage not found")
+		return fmt.Errorf("outage %s: %w", id, domain.ErrNotFound)
 	}
 
 	return nil
