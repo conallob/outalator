@@ -77,17 +77,25 @@ func (s *Server) Start(addr string) error {
 }
 
 // Stop performs a graceful shutdown of the gRPC server started by Start.
-// Clears grpcServer so Start() may be called again once Stop returns.
+// Blocks until all in-flight RPCs have completed. grpcServer is cleared only
+// after GracefulStop returns, so a concurrent Start() call cannot bind the
+// same address while the old server is still draining connections.
 // It has no effect when called on a Server that was not started via Start
 // (e.g., one whose services were registered via RegisterServices onto an
 // externally managed *grpc.Server).
 func (s *Server) Stop() {
 	s.mu.Lock()
 	srv := s.grpcServer
-	s.grpcServer = nil
 	s.mu.Unlock()
 	if srv != nil {
-		srv.GracefulStop()
+		srv.GracefulStop() // drain completes before we clear the field
+		s.mu.Lock()
+		// Only nil the field if it still holds this server; Start() may have
+		// already cleared it when Serve() returned.
+		if s.grpcServer == srv {
+			s.grpcServer = nil
+		}
+		s.mu.Unlock()
 	}
 }
 
