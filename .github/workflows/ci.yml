@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  GOLANGCI_LINT_VERSION: v2.12.2
+
 jobs:
   test:
     name: Tests
@@ -86,12 +89,12 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8  # v6.1.1
         with:
-          version: v2.12.2
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
 
       - name: golangci-lint (SQLite)
         uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8  # v6.1.1
         with:
-          version: v2.12.2
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
           args: --build-tags sqlite ./internal/storage/sqlite/...
 
       - name: Check go.mod tidy
