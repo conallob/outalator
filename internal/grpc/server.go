@@ -48,7 +48,7 @@ func (s *Server) Start(addr string) error {
 	s.mu.Lock()
 	if s.grpcServer != nil {
 		s.mu.Unlock()
-		srv.Stop() // discard the server we just created
+		srv.GracefulStop() // discard the server we just created
 		return fmt.Errorf("server already started")
 	}
 	s.grpcServer = srv
@@ -56,26 +56,35 @@ func (s *Server) Start(addr string) error {
 
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		srv.Stop()
+		srv.GracefulStop()
 		s.mu.Lock()
 		s.grpcServer = nil
 		s.mu.Unlock()
 		return fmt.Errorf("failed to listen on %s: %w", addr, err)
 	}
 
-	if err := srv.Serve(lis); err != nil {
-		return fmt.Errorf("gRPC server error: %w", err)
+	serveErr := srv.Serve(lis)
+
+	// Clear grpcServer so Start() can be called again after Stop()+Serve() returns.
+	s.mu.Lock()
+	s.grpcServer = nil
+	s.mu.Unlock()
+
+	if serveErr != nil {
+		return fmt.Errorf("gRPC server error: %w", serveErr)
 	}
 	return nil
 }
 
 // Stop performs a graceful shutdown of the gRPC server started by Start.
+// Clears grpcServer so Start() may be called again once Stop returns.
 // It has no effect when called on a Server that was not started via Start
 // (e.g., one whose services were registered via RegisterServices onto an
 // externally managed *grpc.Server).
 func (s *Server) Stop() {
 	s.mu.Lock()
 	srv := s.grpcServer
+	s.grpcServer = nil
 	s.mu.Unlock()
 	if srv != nil {
 		srv.GracefulStop()
