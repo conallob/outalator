@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/conall/outalator/internal/domain"
@@ -45,8 +46,8 @@ func (s *PostgresStorage) GetTag(ctx context.Context, id uuid.UUID) (*domain.Tag
 		&tag.ID, &tag.OutageID, &tag.Key, &tag.Value, &tag.CreatedAt,
 		&customFieldsJSON,
 	)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("tag not found")
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("tag %s: %w", id, domain.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tag: %w", err)
@@ -114,7 +115,7 @@ func (s *PostgresStorage) DeleteTag(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
-		return fmt.Errorf("tag not found")
+		return fmt.Errorf("tag %s: %w", id, domain.ErrNotFound)
 	}
 
 	return nil

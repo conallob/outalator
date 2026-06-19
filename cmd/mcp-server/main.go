@@ -14,7 +14,7 @@ import (
 	"github.com/conall/outalator/internal/notification/opsgenie"
 	"github.com/conall/outalator/internal/notification/pagerduty"
 	"github.com/conall/outalator/internal/service"
-	"github.com/conall/outalator/internal/storage/postgres"
+	"github.com/conall/outalator/internal/storage"
 )
 
 func main() {
@@ -27,8 +27,8 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Initialize database connection
-	db, err := postgres.NewStorage(cfg.Database)
+	// Initialize storage backend (postgres by default; sqlite with -tags sqlite)
+	db, err := storage.New(context.Background(), cfg.Database)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

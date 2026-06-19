@@ -18,7 +18,7 @@ import (
 	"github.com/conall/outalator/internal/notification/pagerduty"
 	"github.com/conall/outalator/internal/service"
 	"github.com/conall/outalator/internal/slack"
-	"github.com/conall/outalator/internal/storage/postgres"
+	"github.com/conall/outalator/internal/storage"
 	"github.com/gorilla/mux"
 )
 
@@ -63,8 +63,8 @@ func main() {
 		cfg.Slack.ReactionEmoji = *slackReactionEmoji
 	}
 
-	// Initialize database connection
-	db, err := postgres.NewStorage(cfg.Database)
+	// Initialize storage backend (postgres by default; sqlite with -tags sqlite)
+	db, err := storage.New(context.Background(), cfg.Database)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
