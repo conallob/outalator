@@ -60,7 +60,7 @@ func (s *Service) FetchAlert(ctx context.Context, alertID string) (*notification
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch alert: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -124,7 +124,7 @@ func (s *Service) FetchRecentAlerts(ctx context.Context, since time.Time) ([]*no
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch alerts: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -218,7 +218,7 @@ func (s *Service) FetchHistoricalIncidents(ctx context.Context, opts HistoricalF
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to fetch incidents: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -291,7 +291,7 @@ func (s *Service) ListTeams(ctx context.Context) ([]Team, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch teams: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -332,6 +332,6 @@ func (s *Service) WebhookHandler() interface{} {
 		// PagerDuty webhook implementation
 		// This would parse the webhook payload and return structured data
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "received"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "received"})
 	})
 }

@@ -153,7 +153,7 @@ func (c *Client) GetUserInfo(userID string) (*UserInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var userResp UserInfoResponse
 	if err := json.NewDecoder(resp.Body).Decode(&userResp); err != nil {
@@ -183,7 +183,7 @@ func (c *Client) GetMessageText(channel, timestamp string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var histResp ConversationHistoryResponse
 	if err := json.NewDecoder(resp.Body).Decode(&histResp); err != nil {
@@ -221,7 +221,7 @@ func (c *Client) postJSON(endpoint string, payload map[string]interface{}) (*Mes
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

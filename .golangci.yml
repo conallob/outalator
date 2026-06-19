@@ -1,20 +1,21 @@
+version: "2"
+
 linters:
   disable-all: true
   enable:
     - govet
     - errcheck
     - staticcheck
-    - gosimple
     - ineffassign
     - unused
     - gosec
 
-linters-settings:
-  errcheck:
-    check-type-assertions: true
+  settings:
+    errcheck:
+      check-type-assertions: true
 
-issues:
-  exclude-rules:
-    # Generated proto files produce false positives from some linters.
-    - path: api/proto/v1/
-      linters: [unused, staticcheck, errcheck, gosec]
+  exclusions:
+    rules:
+      # Generated proto files produce false positives from some linters.
+      - path: 'api/proto/v1/.*\.pb\.go'
+        linters: [unused, staticcheck, errcheck, gosec]

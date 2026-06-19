@@ -86,7 +86,7 @@ func (s *PostgresStorage) ListNotesByOutage(ctx context.Context, outageID uuid.U
 	if err != nil {
 		return nil, fmt.Errorf("failed to list notes: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var notes []*domain.Note
 	for rows.Next() {

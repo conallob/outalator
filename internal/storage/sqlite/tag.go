@@ -60,7 +60,7 @@ func (s *SQLiteStorage) ListTagsByOutage(ctx context.Context, outageID uuid.UUID
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tags: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tags []*domain.Tag
 	for rows.Next() {
@@ -110,7 +110,7 @@ func (s *SQLiteStorage) FindOutagesByTag(ctx context.Context, key, value string)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find outages by tag: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var outages []*domain.Outage
 	for rows.Next() {

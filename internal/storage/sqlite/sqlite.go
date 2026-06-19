@@ -67,13 +67,13 @@ func New(ctx context.Context, path string) (*SQLiteStorage, error) {
 	db.SetMaxOpenConns(1)
 
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to ping sqlite database: %w", err)
 	}
 
 	s := &SQLiteStorage{db: db}
 	if err := s.migrate(ctx); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to migrate sqlite database: %w", err)
 	}
 
@@ -161,7 +161,7 @@ func marshalJSONAny(v any) ([]byte, error) {
 		if rv.IsNil() {
 			return []byte("[]"), nil
 		}
-	case reflect.Ptr, reflect.Map, reflect.Chan, reflect.Func, reflect.Interface:
+	case reflect.Pointer, reflect.Map, reflect.Chan, reflect.Func, reflect.Interface:
 		if rv.IsNil() {
 			return []byte("{}"), nil
 		}

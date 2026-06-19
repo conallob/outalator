@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -95,9 +96,17 @@ func (a *Authenticator) LoginHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state := generateRandomState()
 
-		session, _ := a.store.Get(r, sessionName)
+		session, err := a.store.Get(r, sessionName)
+		if err != nil {
+			// gorilla/sessions returns a valid fresh session alongside a decode error
+			// (e.g. expired or rotated secret). Log and continue rather than returning 500.
+			log.Printf("auth: failed to decode session cookie (using fresh session): %v", err)
+		}
 		session.Values["state"] = state
-		session.Save(r, w)
+		if err := session.Save(r, w); err != nil {
+			http.Error(w, "Failed to save session", http.StatusInternalServerError)
+			return
+		}
 
 		http.Redirect(w, r, a.oauth2Config.AuthCodeURL(state), http.StatusFound)
 	}
@@ -108,11 +117,12 @@ func (a *Authenticator) CallbackHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := a.store.Get(r, sessionName)
 		if err != nil {
-			http.Error(w, "Failed to get session", http.StatusInternalServerError)
-			return
+			log.Printf("auth: failed to decode session cookie (using fresh session): %v", err)
 		}
 
-		// Verify state
+		// Verify state. If the session was freshly created above (decode error),
+		// Values["state"] will be absent and this check will return 400 — the user
+		// will need to restart the login flow, which is the correct outcome.
 		savedState, ok := session.Values["state"].(string)
 		if !ok || savedState != r.URL.Query().Get("state") {
 			http.Error(w, "Invalid state parameter", http.StatusBadRequest)
@@ -163,9 +173,15 @@ func (a *Authenticator) CallbackHandler() http.HandlerFunc {
 // LogoutHandler handles user logout
 func (a *Authenticator) LogoutHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, _ := a.store.Get(r, sessionName)
+		session, err := a.store.Get(r, sessionName)
+		if err != nil {
+			log.Printf("auth: failed to decode session cookie (using fresh session): %v", err)
+		}
 		session.Options.MaxAge = -1
-		session.Save(r, w)
+		if err := session.Save(r, w); err != nil {
+			http.Error(w, "Failed to save session", http.StatusInternalServerError)
+			return
+		}
 
 		http.Redirect(w, r, "/", http.StatusFound)
 	}

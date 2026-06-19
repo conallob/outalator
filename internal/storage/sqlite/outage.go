@@ -128,7 +128,7 @@ func (s *SQLiteStorage) ListOutages(ctx context.Context, limit, offset int) ([]*
 	if err != nil {
 		return nil, fmt.Errorf("failed to list outages: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var outages []*domain.Outage
 	for rows.Next() {
