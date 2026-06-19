@@ -37,10 +37,14 @@ func NewServer(svc *service.Service) *Server {
 // (e.g. to call Stop). Returns an error if the server has already been started.
 // The server is created without TLS; wire up grpc.Creds for production use.
 func (s *Server) Start(addr string) error {
-	// Reserve grpcServer under the lock before releasing it. Without this,
-	// two concurrent callers could both pass the nil check, open separate
-	// listeners, and race to assign grpcServer (TOCTOU).
+	// Register services before the server is visible to Stop(), so a
+	// concurrent Stop() cannot call GracefulStop() between assignment and
+	// RegisterServices — which would cause Serve to return immediately.
+	// The TOCTOU guard (check-then-set) still holds because srv is local
+	// until after RegisterServices completes.
 	srv := grpc.NewServer()
+	s.RegisterServices(srv)
+
 	s.mu.Lock()
 	if s.grpcServer != nil {
 		s.mu.Unlock()
@@ -50,10 +54,9 @@ func (s *Server) Start(addr string) error {
 	s.grpcServer = srv
 	s.mu.Unlock()
 
-	s.RegisterServices(srv)
-
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
+		srv.Stop()
 		s.mu.Lock()
 		s.grpcServer = nil
 		s.mu.Unlock()
