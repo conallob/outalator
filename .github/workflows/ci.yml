@@ -57,7 +57,7 @@ jobs:
           go test -v -race -tags sqlite \
             -coverprofile=coverage-sqlite.out \
             -covermode=atomic \
-            ./internal/storage/sqlite/...
+            ./storage/sqlite/...
 
       - name: Upload SQLite coverage to Codecov
         # continue-on-error handles fork PRs (no secrets) and Codecov downtime.
@@ -89,7 +89,7 @@ jobs:
         uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8  # v6.1.1
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
-          args: --build-tags sqlite ./internal/storage/sqlite/...
+          args: --build-tags sqlite ./storage/sqlite/...
 
       - name: Check go.mod tidy
         # Must use GOFLAGS="-tags=sqlite" so modernc.org/sqlite (only imported
