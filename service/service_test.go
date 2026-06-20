@@ -275,8 +275,14 @@ func TestAddTag(t *testing.T) {
 
 func TestFindOutagesByTag(t *testing.T) {
 	svc := newSvc()
-	o1, _ := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "A", Severity: "low"})
-	o2, _ := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "B", Severity: "low"})
+	o1, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "A", Severity: "low"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	o2, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "B", Severity: "low"})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := svc.AddTag(context.Background(), o1.ID, "team", "sre"); err != nil {
 		t.Fatal(err)

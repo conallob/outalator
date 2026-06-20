@@ -235,12 +235,6 @@ func GetUserFromContext(ctx context.Context) (*UserInfo, error) {
 	return user, nil
 }
 
-// WithUser returns a copy of ctx with u stored under the auth context key.
-// Intended for use in tests that need to inject an authenticated user without
-// a live session store.
-func WithUser(ctx context.Context, u *UserInfo) context.Context {
-	return context.WithValue(ctx, userContextKey, u)
-}
 
 // generateRandomState generates a random state parameter
 func generateRandomState() string {

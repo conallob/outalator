@@ -100,6 +100,9 @@ func (m *MemStorage) UpdateOutage(_ context.Context, o *domain.Outage) error {
 	return nil
 }
 
+// DeleteOutage removes the outage but does NOT cascade to notes, tags, or alerts.
+// This diverges from the Postgres implementation (which cascades via FK constraints).
+// Tests that delete an outage and then query its associated entities will see stale data.
 func (m *MemStorage) DeleteOutage(_ context.Context, id uuid.UUID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

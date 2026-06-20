@@ -158,8 +158,8 @@ func TestUpdateOutage(t *testing.T) {
 	decodeJSON(t, rr.Body, &created)
 
 	newTitle := "updated"
-	updateBody, _ := json.Marshal(domain.UpdateOutageRequest{Title: &newTitle})
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/outages/"+created.ID.String(), bytes.NewBuffer(updateBody))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/outages/"+created.ID.String(),
+		encodeJSON(t, domain.UpdateOutageRequest{Title: &newTitle}))
 	req.Header.Set("Content-Type", "application/json")
 	rr = httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -176,17 +176,13 @@ func TestUpdateOutage(t *testing.T) {
 func TestAddNote_Unauthenticated(t *testing.T) {
 	h, _ := newTestHandler()
 
-	// Create an outage directly via the service so we have a valid ID.
-	svc := service.New(testutil.NewMemStorage())
-	o, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "test", Severity: "low"})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	noteBody, _ := json.Marshal(domain.AddNoteRequest{Content: "test note", Format: "plaintext"})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/outages/"+o.ID.String()+"/notes", bytes.NewBuffer(noteBody))
+	// The handler checks auth before touching storage, so any valid-looking
+	// outage ID is sufficient — no need for a real outage in storage.
+	fakeID := uuid.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/outages/"+fakeID.String()+"/notes",
+		encodeJSON(t, domain.AddNoteRequest{Content: "test note", Format: "plaintext"}))
 	req.Header.Set("Content-Type", "application/json")
-	req = mux.SetURLVars(req, map[string]string{"id": o.ID.String()})
+	req = mux.SetURLVars(req, map[string]string{"id": fakeID.String()})
 
 	rr := httptest.NewRecorder()
 	h.AddNote(rr, req)
@@ -206,8 +202,8 @@ func TestAddNote_Authenticated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	noteBody, _ := json.Marshal(domain.AddNoteRequest{Content: "my note", Format: "plaintext"})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/outages/"+o.ID.String()+"/notes", bytes.NewBuffer(noteBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/outages/"+o.ID.String()+"/notes",
+		encodeJSON(t, domain.AddNoteRequest{Content: "my note", Format: "plaintext"}))
 	req.Header.Set("Content-Type", "application/json")
 	req = mux.SetURLVars(req, map[string]string{"id": o.ID.String()})
 
@@ -237,8 +233,8 @@ func TestAddTag(t *testing.T) {
 	var created domain.Outage
 	decodeJSON(t, rr.Body, &created)
 
-	tagBody, _ := json.Marshal(map[string]string{"key": "jira", "value": "OPS-1"})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/outages/"+created.ID.String()+"/tags", bytes.NewBuffer(tagBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/outages/"+created.ID.String()+"/tags",
+		encodeJSON(t, map[string]string{"key": "jira", "value": "OPS-1"}))
 	req.Header.Set("Content-Type", "application/json")
 	rr = httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
