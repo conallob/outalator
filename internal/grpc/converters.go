@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/conall/outalator/internal/domain"
+	"github.com/conall/outalator/domain"
 	pb "github.com/conall/outalator/api/proto/v1"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/structpb"

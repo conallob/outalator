@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/conall/outalator/internal/config"
+	"github.com/conall/outalator/config"
 	_ "modernc.org/sqlite"
 )
 

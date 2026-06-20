@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/conall/outalator/internal/notification"
+	"github.com/conall/outalator/notification"
 )
 
 // Service implements the notification.Service interface for PagerDuty

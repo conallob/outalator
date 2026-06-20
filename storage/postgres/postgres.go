@@ -8,7 +8,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"github.com/conall/outalator/internal/config"
+	"github.com/conall/outalator/config"
 )
 
 // PostgresStorage implements the Storage interface using PostgreSQL

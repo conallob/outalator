@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/conall/outalator/internal/config"
-	"github.com/conall/outalator/internal/domain"
-	"github.com/conall/outalator/internal/notification"
-	"github.com/conall/outalator/internal/notification/opsgenie"
-	"github.com/conall/outalator/internal/notification/pagerduty"
-	"github.com/conall/outalator/internal/storage/postgres"
+	"github.com/conall/outalator/config"
+	"github.com/conall/outalator/domain"
+	"github.com/conall/outalator/notification"
+	"github.com/conall/outalator/notification/opsgenie"
+	"github.com/conall/outalator/notification/pagerduty"
+	"github.com/conall/outalator/storage/postgres"
 	"github.com/google/uuid"
 )
 

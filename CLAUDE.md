@@ -50,7 +50,7 @@ go build -tags sqlite ./...
 DB_DRIVER=sqlite DB_PATH=outalator.db ./outalator
 ```
 
-The SQLite schema is embedded in `internal/storage/sqlite/schema.sql` and applied automatically on first open. It is intentionally maintained separately from the Postgres migration files.
+The SQLite schema is embedded in `storage/sqlite/schema.sql` and applied automatically on first open. It is intentionally maintained separately from the Postgres migration files.
 
 **Important — Go module maintenance:**
 
@@ -66,21 +66,28 @@ The entries remain marked `// indirect` in `go.mod` even though they are direct 
 
 ## Architecture
 
-The application follows a layered architecture:
+The application follows a layered architecture. Core library packages are top-level (importable); app-specific wiring stays under `internal/`.
 
 ```
 cmd/outalator/          - Application entry point
+cmd/mcp-server/         - MCP server binary
+cmd/import-history/     - Alert import tool
+domain/                 - Core domain models (Outage, Alert, Note, Tag)
+storage/                - Storage interface and implementations
+  ├── postgres/         - PostgreSQL implementation
+  └── sqlite/           - SQLite implementation (build tag: sqlite)
+service/                - Business logic layer
+notification/           - Notification service interface
+  ├── pagerduty/        - PagerDuty integration
+  └── opsgenie/         - OpsGenie integration
+config/                 - Configuration management
+validation/             - JSON schema validation helpers
 internal/
-  ├── domain/           - Core domain models (Outage, Alert, Note, Tag)
-  ├── storage/          - Storage interface and implementations
-  │   └── postgres/     - PostgreSQL implementation
-  ├── notification/     - Notification service interface
-  │   ├── pagerduty/    - PagerDuty integration
-  │   └── opsgenie/     - OpsGenie integration
-  ├── service/          - Business logic layer
   ├── api/              - HTTP handlers and routes (REST)
+  ├── auth/             - OIDC authentication middleware
   ├── grpc/             - gRPC handlers and converters
-  └── config/           - Configuration management
+  ├── mcp/              - MCP server implementation
+  └── slack/            - Slack bot integration
 api/proto/              - Protocol Buffer definitions
 migrations/             - Database migration scripts
 scripts/                - Build and generation scripts

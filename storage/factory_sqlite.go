@@ -6,9 +6,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/conall/outalator/internal/config"
-	"github.com/conall/outalator/internal/storage/postgres"
-	"github.com/conall/outalator/internal/storage/sqlite"
+	"github.com/conall/outalator/config"
+	"github.com/conall/outalator/storage/postgres"
+	"github.com/conall/outalator/storage/sqlite"
 )
 
 // New creates a Storage instance based on cfg.Driver.

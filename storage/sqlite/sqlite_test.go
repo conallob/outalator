@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/conall/outalator/internal/domain"
-	"github.com/conall/outalator/internal/storage"
-	"github.com/conall/outalator/internal/storage/sqlite"
+	"github.com/conall/outalator/domain"
+	"github.com/conall/outalator/storage"
+	"github.com/conall/outalator/storage/sqlite"
 	"github.com/google/uuid"
 )
 

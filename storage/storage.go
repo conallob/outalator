@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/conall/outalator/internal/domain"
+	"github.com/conall/outalator/domain"
 	"github.com/google/uuid"
 )
 
