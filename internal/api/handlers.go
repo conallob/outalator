@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/conall/outalator/internal/auth"
-	"github.com/conall/outalator/internal/domain"
-	"github.com/conall/outalator/internal/service"
+	"github.com/conall/outalator/domain"
+	"github.com/conall/outalator/service"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )

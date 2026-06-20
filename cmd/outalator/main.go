@@ -12,13 +12,13 @@ import (
 	"time"
 
 	"github.com/conall/outalator/internal/api"
-	"github.com/conall/outalator/internal/config"
+	"github.com/conall/outalator/config"
 	grpcserver "github.com/conall/outalator/internal/grpc"
-	"github.com/conall/outalator/internal/notification/opsgenie"
-	"github.com/conall/outalator/internal/notification/pagerduty"
-	"github.com/conall/outalator/internal/service"
+	"github.com/conall/outalator/notification/opsgenie"
+	"github.com/conall/outalator/notification/pagerduty"
+	"github.com/conall/outalator/service"
 	"github.com/conall/outalator/internal/slack"
-	"github.com/conall/outalator/internal/storage"
+	"github.com/conall/outalator/storage"
 	"github.com/gorilla/mux"
 )
 

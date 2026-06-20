@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/conall/outalator/internal/domain"
-	"github.com/conall/outalator/internal/notification"
-	"github.com/conall/outalator/internal/storage"
-	"github.com/conall/outalator/internal/validation"
+	"github.com/conall/outalator/domain"
+	"github.com/conall/outalator/notification"
+	"github.com/conall/outalator/storage"
+	"github.com/conall/outalator/validation"
 	"github.com/google/uuid"
 )
 
