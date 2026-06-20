@@ -154,6 +154,9 @@ func TestUpdateOutage(t *testing.T) {
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/api/v1/outages",
 		encodeJSON(t, domain.CreateOutageRequest{Title: "original", Severity: "low"})))
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("setup CreateOutage failed: %d %s", rr.Code, rr.Body.String())
+	}
 	var created domain.Outage
 	decodeJSON(t, rr.Body, &created)
 

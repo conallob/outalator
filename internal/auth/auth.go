@@ -235,7 +235,6 @@ func GetUserFromContext(ctx context.Context) (*UserInfo, error) {
 	return user, nil
 }
 
-
 // generateRandomState generates a random state parameter
 func generateRandomState() string {
 	b := make([]byte, 32)

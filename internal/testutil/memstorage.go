@@ -15,10 +15,16 @@ import (
 // clone returns a deep copy of v via JSON round-trip. Slice and map fields in
 // domain types (Notes, Tags, Metadata, CustomFields, etc.) would otherwise share
 // backing arrays after a plain struct copy, which can cause data races under -race.
+// Panics if marshaling fails — domain types must be JSON-serialisable.
 func clone[T any](v T) T {
-	b, _ := json.Marshal(v)
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic("testutil.clone: marshal failed: " + err.Error())
+	}
 	var out T
-	_ = json.Unmarshal(b, &out)
+	if err := json.Unmarshal(b, &out); err != nil {
+		panic("testutil.clone: unmarshal failed: " + err.Error())
+	}
 	return out
 }
 
@@ -87,6 +93,7 @@ func (m *MemStorage) ListOutages(_ context.Context, limit, offset int) ([]*domai
 		cp := clone(*o)
 		all = append(all, &cp)
 	}
+	// Sort by UUID string for test determinism; this is not creation order.
 	sort.Slice(all, func(i, j int) bool {
 		return all[i].ID.String() < all[j].ID.String()
 	})
