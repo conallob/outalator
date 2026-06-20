@@ -3,267 +3,20 @@ package service
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 
 	"github.com/conall/outalator/domain"
+	"github.com/conall/outalator/internal/testutil"
 	"github.com/conall/outalator/storage"
 	"github.com/google/uuid"
 )
 
-// memStorage is an in-memory implementation of storage.Storage for testing.
-type memStorage struct {
-	mu      sync.RWMutex
-	outages map[uuid.UUID]*domain.Outage
-	notes   map[uuid.UUID]*domain.Note
-	tags    map[uuid.UUID]*domain.Tag
-	alerts  map[uuid.UUID]*domain.Alert
+// Compile-time assertion: testutil.MemStorage satisfies storage.Storage.
+var _ storage.Storage = (*testutil.MemStorage)(nil)
+
+func newSvc() *Service {
+	return New(testutil.NewMemStorage())
 }
-
-func newMemStorage() *memStorage {
-	return &memStorage{
-		outages: make(map[uuid.UUID]*domain.Outage),
-		notes:   make(map[uuid.UUID]*domain.Note),
-		tags:    make(map[uuid.UUID]*domain.Tag),
-		alerts:  make(map[uuid.UUID]*domain.Alert),
-	}
-}
-
-func (m *memStorage) Close() error { return nil }
-
-func (m *memStorage) CreateOutage(_ context.Context, o *domain.Outage) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	cp := *o
-	m.outages[o.ID] = &cp
-	return nil
-}
-
-func (m *memStorage) GetOutage(_ context.Context, id uuid.UUID) (*domain.Outage, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	o, ok := m.outages[id]
-	if !ok {
-		return nil, domain.ErrNotFound
-	}
-	cp := *o
-	// Attach related entities
-	for _, n := range m.notes {
-		if n.OutageID == id {
-			cp.Notes = append(cp.Notes, *n)
-		}
-	}
-	for _, t := range m.tags {
-		if t.OutageID == id {
-			cp.Tags = append(cp.Tags, *t)
-		}
-	}
-	for _, a := range m.alerts {
-		if a.OutageID == id {
-			cp.Alerts = append(cp.Alerts, *a)
-		}
-	}
-	return &cp, nil
-}
-
-func (m *memStorage) ListOutages(_ context.Context, limit, offset int) ([]*domain.Outage, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	all := make([]*domain.Outage, 0, len(m.outages))
-	for _, o := range m.outages {
-		cp := *o
-		all = append(all, &cp)
-	}
-	if offset >= len(all) {
-		return nil, nil
-	}
-	end := offset + limit
-	if end > len(all) {
-		end = len(all)
-	}
-	return all[offset:end], nil
-}
-
-func (m *memStorage) UpdateOutage(_ context.Context, o *domain.Outage) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.outages[o.ID]; !ok {
-		return domain.ErrNotFound
-	}
-	cp := *o
-	m.outages[o.ID] = &cp
-	return nil
-}
-
-func (m *memStorage) DeleteOutage(_ context.Context, id uuid.UUID) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.outages, id)
-	return nil
-}
-
-func (m *memStorage) CreateAlert(_ context.Context, a *domain.Alert) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	cp := *a
-	m.alerts[a.ID] = &cp
-	return nil
-}
-
-func (m *memStorage) GetAlert(_ context.Context, id uuid.UUID) (*domain.Alert, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	a, ok := m.alerts[id]
-	if !ok {
-		return nil, domain.ErrNotFound
-	}
-	cp := *a
-	return &cp, nil
-}
-
-func (m *memStorage) GetAlertByExternalID(_ context.Context, externalID, source string) (*domain.Alert, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	for _, a := range m.alerts {
-		if a.ExternalID == externalID && a.Source == source {
-			cp := *a
-			return &cp, nil
-		}
-	}
-	return nil, domain.ErrNotFound
-}
-
-func (m *memStorage) ListAlertsByOutage(_ context.Context, outageID uuid.UUID) ([]*domain.Alert, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	var out []*domain.Alert
-	for _, a := range m.alerts {
-		if a.OutageID == outageID {
-			cp := *a
-			out = append(out, &cp)
-		}
-	}
-	return out, nil
-}
-
-func (m *memStorage) UpdateAlert(_ context.Context, a *domain.Alert) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.alerts[a.ID]; !ok {
-		return domain.ErrNotFound
-	}
-	cp := *a
-	m.alerts[a.ID] = &cp
-	return nil
-}
-
-func (m *memStorage) CreateNote(_ context.Context, n *domain.Note) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	cp := *n
-	m.notes[n.ID] = &cp
-	return nil
-}
-
-func (m *memStorage) GetNote(_ context.Context, id uuid.UUID) (*domain.Note, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	n, ok := m.notes[id]
-	if !ok {
-		return nil, domain.ErrNotFound
-	}
-	cp := *n
-	return &cp, nil
-}
-
-func (m *memStorage) ListNotesByOutage(_ context.Context, outageID uuid.UUID) ([]*domain.Note, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	var out []*domain.Note
-	for _, n := range m.notes {
-		if n.OutageID == outageID {
-			cp := *n
-			out = append(out, &cp)
-		}
-	}
-	return out, nil
-}
-
-func (m *memStorage) UpdateNote(_ context.Context, n *domain.Note) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.notes[n.ID]; !ok {
-		return domain.ErrNotFound
-	}
-	cp := *n
-	m.notes[n.ID] = &cp
-	return nil
-}
-
-func (m *memStorage) DeleteNote(_ context.Context, id uuid.UUID) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.notes, id)
-	return nil
-}
-
-func (m *memStorage) CreateTag(_ context.Context, t *domain.Tag) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	cp := *t
-	m.tags[t.ID] = &cp
-	return nil
-}
-
-func (m *memStorage) GetTag(_ context.Context, id uuid.UUID) (*domain.Tag, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	t, ok := m.tags[id]
-	if !ok {
-		return nil, domain.ErrNotFound
-	}
-	cp := *t
-	return &cp, nil
-}
-
-func (m *memStorage) ListTagsByOutage(_ context.Context, outageID uuid.UUID) ([]*domain.Tag, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	var out []*domain.Tag
-	for _, t := range m.tags {
-		if t.OutageID == outageID {
-			cp := *t
-			out = append(out, &cp)
-		}
-	}
-	return out, nil
-}
-
-func (m *memStorage) DeleteTag(_ context.Context, id uuid.UUID) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.tags, id)
-	return nil
-}
-
-func (m *memStorage) FindOutagesByTag(_ context.Context, key, value string) ([]*domain.Outage, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	seen := make(map[uuid.UUID]bool)
-	var out []*domain.Outage
-	for _, t := range m.tags {
-		if t.Key == key && t.Value == value && !seen[t.OutageID] {
-			seen[t.OutageID] = true
-			if o, ok := m.outages[t.OutageID]; ok {
-				cp := *o
-				out = append(out, &cp)
-			}
-		}
-	}
-	return out, nil
-}
-
-// ---- Tests ----
 
 func TestCreateOutage(t *testing.T) {
 	tests := []struct {
@@ -298,7 +51,7 @@ func TestCreateOutage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := New(newMemStorage())
+			svc := newSvc()
 			got, err := svc.CreateOutage(context.Background(), tt.req)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("CreateOutage() err = %v, wantErr %v", err, tt.wantErr)
@@ -319,7 +72,7 @@ func TestCreateOutage(t *testing.T) {
 }
 
 func TestGetOutage(t *testing.T) {
-	svc := New(newMemStorage())
+	svc := newSvc()
 	created, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{
 		Title:    "Test outage",
 		Severity: "low",
@@ -350,7 +103,7 @@ func TestGetOutage(t *testing.T) {
 }
 
 func TestListOutages(t *testing.T) {
-	svc := New(newMemStorage())
+	svc := newSvc()
 	for i := 0; i < 5; i++ {
 		if _, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{
 			Title:    "outage",
@@ -384,24 +137,16 @@ func TestListOutages(t *testing.T) {
 }
 
 func TestUpdateOutage(t *testing.T) {
-	svc := New(newMemStorage())
-	created, _ := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{
-		Title:    "original",
-		Severity: "low",
-	})
-
 	newTitle := "updated"
 	newStatus := "investigating"
 	tests := []struct {
 		name    string
-		id      uuid.UUID
 		req     domain.UpdateOutageRequest
 		wantErr bool
 		check   func(*domain.Outage)
 	}{
 		{
 			name: "update title",
-			id:   created.ID,
 			req:  domain.UpdateOutageRequest{Title: &newTitle},
 			check: func(o *domain.Outage) {
 				if o.Title != newTitle {
@@ -411,7 +156,6 @@ func TestUpdateOutage(t *testing.T) {
 		},
 		{
 			name: "update status",
-			id:   created.ID,
 			req:  domain.UpdateOutageRequest{Status: &newStatus},
 			check: func(o *domain.Outage) {
 				if o.Status != newStatus {
@@ -421,14 +165,29 @@ func TestUpdateOutage(t *testing.T) {
 		},
 		{
 			name:    "not found",
-			id:      uuid.New(),
 			req:     domain.UpdateOutageRequest{Title: &newTitle},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := svc.UpdateOutage(context.Background(), tt.id, tt.req)
+			svc := newSvc()
+			// Create a fresh outage for each sub-test to avoid order dependence.
+			var id uuid.UUID
+			if !tt.wantErr {
+				o, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{
+					Title:    "original",
+					Severity: "low",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				id = o.ID
+			} else {
+				id = uuid.New() // non-existent
+			}
+
+			got, err := svc.UpdateOutage(context.Background(), id, tt.req)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("UpdateOutage() err = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -440,7 +199,7 @@ func TestUpdateOutage(t *testing.T) {
 }
 
 func TestAddNote(t *testing.T) {
-	svc := New(newMemStorage())
+	svc := newSvc()
 	created, _ := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{
 		Title:    "outage",
 		Severity: "high",
@@ -483,7 +242,7 @@ func TestAddNote(t *testing.T) {
 }
 
 func TestAddTag(t *testing.T) {
-	svc := New(newMemStorage())
+	svc := newSvc()
 	created, _ := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{
 		Title:    "outage",
 		Severity: "high",
@@ -515,7 +274,7 @@ func TestAddTag(t *testing.T) {
 }
 
 func TestFindOutagesByTag(t *testing.T) {
-	svc := New(newMemStorage())
+	svc := newSvc()
 	o1, _ := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "A", Severity: "low"})
 	o2, _ := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "B", Severity: "low"})
 
@@ -552,12 +311,8 @@ func TestFindOutagesByTag(t *testing.T) {
 	}
 }
 
-// Verify memStorage satisfies the full storage.Storage interface at compile time.
-var _ storage.Storage = (*memStorage)(nil)
-
-// Verify error wrapping works.
 func TestErrNotFound(t *testing.T) {
-	svc := New(newMemStorage())
+	svc := newSvc()
 	_, err := svc.GetOutage(context.Background(), uuid.New())
 	if err == nil {
 		t.Fatal("expected error")
