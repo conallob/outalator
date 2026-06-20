@@ -3,6 +3,7 @@ package testutil
 
 import (
 	"context"
+	"encoding/json"
 	"sort"
 	"sync"
 
@@ -10,6 +11,16 @@ import (
 	"github.com/conall/outalator/storage"
 	"github.com/google/uuid"
 )
+
+// clone returns a deep copy of v via JSON round-trip. Slice and map fields in
+// domain types (Notes, Tags, Metadata, CustomFields, etc.) would otherwise share
+// backing arrays after a plain struct copy, which can cause data races under -race.
+func clone[T any](v T) T {
+	b, _ := json.Marshal(v)
+	var out T
+	_ = json.Unmarshal(b, &out)
+	return out
+}
 
 // Compile-time assertion that MemStorage satisfies the full storage.Storage interface.
 var _ storage.Storage = (*MemStorage)(nil)
@@ -41,7 +52,7 @@ func (m *MemStorage) Close() error { return nil }
 func (m *MemStorage) CreateOutage(_ context.Context, o *domain.Outage) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	cp := *o
+	cp := clone(*o)
 	m.outages[o.ID] = &cp
 	return nil
 }
@@ -53,7 +64,7 @@ func (m *MemStorage) GetOutage(_ context.Context, id uuid.UUID) (*domain.Outage,
 	if !ok {
 		return nil, domain.ErrNotFound
 	}
-	cp := *o
+	cp := clone(*o)
 	for _, n := range m.notes {
 		if n.OutageID == id {
 			cp.Notes = append(cp.Notes, *n)
@@ -73,7 +84,7 @@ func (m *MemStorage) ListOutages(_ context.Context, limit, offset int) ([]*domai
 	defer m.mu.RUnlock()
 	all := make([]*domain.Outage, 0, len(m.outages))
 	for _, o := range m.outages {
-		cp := *o
+		cp := clone(*o)
 		all = append(all, &cp)
 	}
 	sort.Slice(all, func(i, j int) bool {
@@ -95,7 +106,7 @@ func (m *MemStorage) UpdateOutage(_ context.Context, o *domain.Outage) error {
 	if _, ok := m.outages[o.ID]; !ok {
 		return domain.ErrNotFound
 	}
-	cp := *o
+	cp := clone(*o)
 	m.outages[o.ID] = &cp
 	return nil
 }
@@ -118,7 +129,7 @@ func (m *MemStorage) DeleteOutage(_ context.Context, id uuid.UUID) error {
 func (m *MemStorage) CreateAlert(_ context.Context, a *domain.Alert) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	cp := *a
+	cp := clone(*a)
 	m.alerts[a.ID] = &cp
 	return nil
 }
@@ -130,7 +141,7 @@ func (m *MemStorage) GetAlert(_ context.Context, id uuid.UUID) (*domain.Alert, e
 	if !ok {
 		return nil, domain.ErrNotFound
 	}
-	cp := *a
+	cp := clone(*a)
 	return &cp, nil
 }
 
@@ -139,7 +150,7 @@ func (m *MemStorage) GetAlertByExternalID(_ context.Context, externalID, source 
 	defer m.mu.RUnlock()
 	for _, a := range m.alerts {
 		if a.ExternalID == externalID && a.Source == source {
-			cp := *a
+			cp := clone(*a)
 			return &cp, nil
 		}
 	}
@@ -152,7 +163,7 @@ func (m *MemStorage) ListAlertsByOutage(_ context.Context, outageID uuid.UUID) (
 	var out []*domain.Alert
 	for _, a := range m.alerts {
 		if a.OutageID == outageID {
-			cp := *a
+			cp := clone(*a)
 			out = append(out, &cp)
 		}
 	}
@@ -165,7 +176,7 @@ func (m *MemStorage) UpdateAlert(_ context.Context, a *domain.Alert) error {
 	if _, ok := m.alerts[a.ID]; !ok {
 		return domain.ErrNotFound
 	}
-	cp := *a
+	cp := clone(*a)
 	m.alerts[a.ID] = &cp
 	return nil
 }
@@ -175,7 +186,7 @@ func (m *MemStorage) UpdateAlert(_ context.Context, a *domain.Alert) error {
 func (m *MemStorage) CreateNote(_ context.Context, n *domain.Note) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	cp := *n
+	cp := clone(*n)
 	m.notes[n.ID] = &cp
 	return nil
 }
@@ -187,7 +198,7 @@ func (m *MemStorage) GetNote(_ context.Context, id uuid.UUID) (*domain.Note, err
 	if !ok {
 		return nil, domain.ErrNotFound
 	}
-	cp := *n
+	cp := clone(*n)
 	return &cp, nil
 }
 
@@ -197,7 +208,7 @@ func (m *MemStorage) ListNotesByOutage(_ context.Context, outageID uuid.UUID) ([
 	var out []*domain.Note
 	for _, n := range m.notes {
 		if n.OutageID == outageID {
-			cp := *n
+			cp := clone(*n)
 			out = append(out, &cp)
 		}
 	}
@@ -210,7 +221,7 @@ func (m *MemStorage) UpdateNote(_ context.Context, n *domain.Note) error {
 	if _, ok := m.notes[n.ID]; !ok {
 		return domain.ErrNotFound
 	}
-	cp := *n
+	cp := clone(*n)
 	m.notes[n.ID] = &cp
 	return nil
 }
@@ -230,7 +241,7 @@ func (m *MemStorage) DeleteNote(_ context.Context, id uuid.UUID) error {
 func (m *MemStorage) CreateTag(_ context.Context, t *domain.Tag) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	cp := *t
+	cp := clone(*t)
 	m.tags[t.ID] = &cp
 	return nil
 }
@@ -242,7 +253,7 @@ func (m *MemStorage) GetTag(_ context.Context, id uuid.UUID) (*domain.Tag, error
 	if !ok {
 		return nil, domain.ErrNotFound
 	}
-	cp := *t
+	cp := clone(*t)
 	return &cp, nil
 }
 
@@ -252,7 +263,7 @@ func (m *MemStorage) ListTagsByOutage(_ context.Context, outageID uuid.UUID) ([]
 	var out []*domain.Tag
 	for _, t := range m.tags {
 		if t.OutageID == outageID {
-			cp := *t
+			cp := clone(*t)
 			out = append(out, &cp)
 		}
 	}
@@ -278,7 +289,7 @@ func (m *MemStorage) FindOutagesByTag(_ context.Context, key, value string) ([]*
 		if t.Key == key && t.Value == value && !seen[t.OutageID] {
 			seen[t.OutageID] = true
 			if o, ok := m.outages[t.OutageID]; ok {
-				cp := *o
+				cp := clone(*o)
 				out = append(out, &cp)
 			}
 		}
