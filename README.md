@@ -1,9 +1,11 @@
 # Outalator
 
 [![CI](https://github.com/conallob/outalator/actions/workflows/ci.yml/badge.svg)](https://github.com/conallob/outalator/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/conallob/outalator)](https://goreportcard.com/report/github.com/conallob/outalator)
 [![codecov](https://codecov.io/gh/conallob/outalator/branch/main/graph/badge.svg)](https://codecov.io/gh/conallob/outalator)
 [![Go](https://img.shields.io/github/go-mod/go-version/conallob/outalator)](https://github.com/conallob/outalator/blob/main/go.mod)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg?style=flat&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/conallob)
 
 A modern web application for tracking outage troubleshooting notes for Site Reliability Engineers (SREs), inspired by [Outalator](https://sre.google/sre-book/tracking-outages/) from the Google SRE book.
 
