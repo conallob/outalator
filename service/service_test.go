@@ -200,10 +200,13 @@ func TestUpdateOutage(t *testing.T) {
 
 func TestAddNote(t *testing.T) {
 	svc := newSvc()
-	created, _ := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{
+	created, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{
 		Title:    "outage",
 		Severity: "high",
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name     string
@@ -243,10 +246,13 @@ func TestAddNote(t *testing.T) {
 
 func TestAddTag(t *testing.T) {
 	svc := newSvc()
-	created, _ := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{
+	created, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{
 		Title:    "outage",
 		Severity: "high",
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name     string
