@@ -52,3 +52,4 @@ helm/outalator/values-override.yaml
 values-*.yaml
 .secrets/
 secrets/
+.claude/
