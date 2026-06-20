@@ -178,6 +178,26 @@ func (s *Service) UpdateOutage(ctx context.Context, id uuid.UUID, req domain.Upd
 	return s.storage.GetOutage(ctx, id)
 }
 
+// DeleteOutage deletes an outage by ID.
+func (s *Service) DeleteOutage(ctx context.Context, id uuid.UUID) error {
+	return s.storage.DeleteOutage(ctx, id)
+}
+
+// DeleteNote deletes a note by ID.
+func (s *Service) DeleteNote(ctx context.Context, noteID uuid.UUID) error {
+	return s.storage.DeleteNote(ctx, noteID)
+}
+
+// ListNotesByOutage returns all notes for the given outage.
+func (s *Service) ListNotesByOutage(ctx context.Context, outageID uuid.UUID) ([]*domain.Note, error) {
+	return s.storage.ListNotesByOutage(ctx, outageID)
+}
+
+// ListAlertsByOutage returns all alerts linked to the given outage.
+func (s *Service) ListAlertsByOutage(ctx context.Context, outageID uuid.UUID) ([]*domain.Alert, error) {
+	return s.storage.ListAlertsByOutage(ctx, outageID)
+}
+
 // AddNote adds a note to an outage
 func (s *Service) AddNote(ctx context.Context, outageID uuid.UUID, req domain.AddNoteRequest) (*domain.Note, error) {
 	// Verify outage exists

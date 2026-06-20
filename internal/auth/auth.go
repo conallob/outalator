@@ -21,12 +21,15 @@ type UserInfo struct {
 	Sub   string `json:"sub"`
 }
 
-type contextKey string
+type contextKey struct{}
 
-const (
-	userContextKey contextKey = "user"
-	sessionName    string     = "outalator-session"
-)
+// UserContextKey is the context key for the authenticated user.
+// Exported with an unexported type so test helpers in other packages can
+// inject a user via context.WithValue without a live session store.
+// External code cannot create new contextKey values, keeping the key unique.
+var UserContextKey = contextKey{}
+
+const sessionName string = "outalator-session"
 
 // Config holds OIDC configuration
 type Config struct {
@@ -221,14 +224,14 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 		}
 
 		// Add user to context
-		ctx := context.WithValue(r.Context(), userContextKey, &userInfo)
+		ctx := context.WithValue(r.Context(), UserContextKey, &userInfo)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 // GetUserFromContext extracts user info from request context
 func GetUserFromContext(ctx context.Context) (*UserInfo, error) {
-	user, ok := ctx.Value(userContextKey).(*UserInfo)
+	user, ok := ctx.Value(UserContextKey).(*UserInfo)
 	if !ok {
 		return nil, fmt.Errorf("no user in context")
 	}

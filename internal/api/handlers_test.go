@@ -26,7 +26,7 @@ func newTestHandler() (*Handler, *mux.Router) {
 }
 
 // encodeJSON encodes v into a new buffer, fataling the test on error.
-func encodeJSON(t *testing.T, v interface{}) *bytes.Buffer {
+func encodeJSON(t *testing.T, v any) *bytes.Buffer {
 	t.Helper()
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(v); err != nil {
@@ -36,7 +36,7 @@ func encodeJSON(t *testing.T, v interface{}) *bytes.Buffer {
 }
 
 // decodeJSON decodes JSON from b into v, fataling the test on error.
-func decodeJSON(t *testing.T, b *bytes.Buffer, v interface{}) {
+func decodeJSON(t *testing.T, b *bytes.Buffer, v any) {
 	t.Helper()
 	if err := json.NewDecoder(b).Decode(v); err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func TestCreateOutage(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		body     interface{}
+		body     any
 		wantCode int
 	}{
 		{
@@ -107,7 +107,7 @@ func TestListOutages(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("status = %d, want 200", rr.Code)
 	}
-	var resp map[string]interface{}
+	var resp map[string]any
 	decodeJSON(t, rr.Body, &resp)
 	if _, ok := resp["outages"]; !ok {
 		t.Error("response missing 'outages' key")
@@ -176,6 +176,39 @@ func TestUpdateOutage(t *testing.T) {
 	}
 }
 
+func TestDeleteOutage(t *testing.T) {
+	_, router := newTestHandler()
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/api/v1/outages",
+		encodeJSON(t, domain.CreateOutageRequest{Title: "to delete", Severity: "low"})))
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("setup CreateOutage failed: %d %s", rr.Code, rr.Body.String())
+	}
+	var created domain.Outage
+	decodeJSON(t, rr.Body, &created)
+
+	tests := []struct {
+		name     string
+		id       string
+		wantCode int
+	}{
+		{"found", created.ID.String(), http.StatusNoContent},
+		{"not found", uuid.New().String(), http.StatusNotFound},
+		{"bad id", "not-a-uuid", http.StatusBadRequest},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodDelete, "/api/v1/outages/"+tt.id, nil)
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+			if rr.Code != tt.wantCode {
+				t.Errorf("status = %d, want %d; body: %s", rr.Code, tt.wantCode, rr.Body.String())
+			}
+		})
+	}
+}
+
 func TestAddNote_Unauthenticated(t *testing.T) {
 	h, _ := newTestHandler()
 
@@ -210,9 +243,9 @@ func TestAddNote_Authenticated(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req = mux.SetURLVars(req, map[string]string{"id": o.ID.String()})
 
-	// Inject authenticated user via auth.WithUser.
+	// Inject authenticated user via testutil.WithUser.
 	fakeUser := &auth.UserInfo{Email: "alice@example.com", Name: "Alice", Sub: "sub-123"}
-	req = req.WithContext(auth.WithUser(req.Context(), fakeUser))
+	req = req.WithContext(testutil.WithUser(req.Context(), fakeUser))
 
 	rr := httptest.NewRecorder()
 	h.AddNote(rr, req)

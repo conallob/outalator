@@ -29,6 +29,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/api/v1/outages", h.ListOutages).Methods("GET")
 	r.HandleFunc("/api/v1/outages/{id}", h.GetOutage).Methods("GET")
 	r.HandleFunc("/api/v1/outages/{id}", h.UpdateOutage).Methods("PATCH")
+	r.HandleFunc("/api/v1/outages/{id}", h.DeleteOutage).Methods("DELETE")
 
 	// Note routes
 	r.HandleFunc("/api/v1/outages/{id}/notes", h.AddNote).Methods("POST")
@@ -123,6 +124,23 @@ func (h *Handler) UpdateOutage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, outage)
+}
+
+// DeleteOutage handles DELETE /api/v1/outages/{id}
+func (h *Handler) DeleteOutage(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid outage ID")
+		return
+	}
+
+	if err := h.service.DeleteOutage(r.Context(), id); err != nil {
+		respondError(w, http.StatusNotFound, "Outage not found")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // AddNote handles POST /api/v1/outages/{id}/notes

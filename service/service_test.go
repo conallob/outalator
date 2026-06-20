@@ -333,3 +333,98 @@ func TestErrNotFound(t *testing.T) {
 		t.Errorf("expected ErrNotFound, got %v", err)
 	}
 }
+
+func TestDeleteOutage(t *testing.T) {
+	svc := newSvc()
+	o, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "to delete", Severity: "low"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add a note so we can verify cascade.
+	if _, err := svc.AddNote(context.Background(), o.ID, domain.AddNoteRequest{Content: "note", Format: "plaintext", Author: "alice"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := svc.DeleteOutage(context.Background(), o.ID); err != nil {
+		t.Fatalf("DeleteOutage() err = %v", err)
+	}
+
+	// Outage should be gone.
+	if _, err := svc.GetOutage(context.Background(), o.ID); !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("expected ErrNotFound after delete, got %v", err)
+	}
+
+	// Deleting a non-existent outage should return ErrNotFound.
+	if err := svc.DeleteOutage(context.Background(), uuid.New()); !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("expected ErrNotFound for unknown outage, got %v", err)
+	}
+}
+
+func TestDeleteNote(t *testing.T) {
+	svc := newSvc()
+	o, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "outage", Severity: "low"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	note, err := svc.AddNote(context.Background(), o.ID, domain.AddNoteRequest{Content: "text", Format: "plaintext", Author: "alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := svc.DeleteNote(context.Background(), note.ID); err != nil {
+		t.Fatalf("DeleteNote() err = %v", err)
+	}
+
+	// Deleting again should return ErrNotFound.
+	if err := svc.DeleteNote(context.Background(), note.ID); !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("expected ErrNotFound for second delete, got %v", err)
+	}
+}
+
+func TestListNotesByOutage(t *testing.T) {
+	svc := newSvc()
+	o, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "outage", Severity: "low"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ {
+		if _, err := svc.AddNote(context.Background(), o.ID, domain.AddNoteRequest{Content: "note", Format: "plaintext", Author: "alice"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	notes, err := svc.ListNotesByOutage(context.Background(), o.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(notes) != 3 {
+		t.Errorf("len = %d, want 3", len(notes))
+	}
+
+	// Unknown outage returns empty slice, not an error.
+	notes, err = svc.ListNotesByOutage(context.Background(), uuid.New())
+	if err != nil {
+		t.Fatalf("unexpected error for unknown outage: %v", err)
+	}
+	if len(notes) != 0 {
+		t.Errorf("expected 0 notes for unknown outage, got %d", len(notes))
+	}
+}
+
+func TestListAlertsByOutage(t *testing.T) {
+	svc := newSvc()
+	o, err := svc.CreateOutage(context.Background(), domain.CreateOutageRequest{Title: "outage", Severity: "low"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// No alerts yet.
+	alerts, err := svc.ListAlertsByOutage(context.Background(), o.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(alerts) != 0 {
+		t.Errorf("expected 0 alerts, got %d", len(alerts))
+	}
+}
