@@ -2,6 +2,8 @@ coverage:
   ignore:
     # Generated protobuf files; coverage here is noise, not signal.
     - "api/proto/v1/*.pb.go"
+    # Test helper infrastructure; not production code.
+    - "internal/testutil/**"
   status:
     patch:
       default:
