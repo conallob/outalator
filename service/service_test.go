@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/conall/outalator/domain"
+	"github.com/conall/outalator/storage"
 	"github.com/google/uuid"
 )
 
@@ -551,11 +552,8 @@ func TestFindOutagesByTag(t *testing.T) {
 	}
 }
 
-// Verify that memStorage satisfies the storage.Storage interface at compile time.
-// We import the interface indirectly via the service package's dependency.
-var _ interface {
-	Close() error
-} = (*memStorage)(nil)
+// Verify memStorage satisfies the full storage.Storage interface at compile time.
+var _ storage.Storage = (*memStorage)(nil)
 
 // Verify error wrapping works.
 func TestErrNotFound(t *testing.T) {
