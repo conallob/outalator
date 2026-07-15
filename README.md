@@ -1,7 +1,6 @@
 # Outalator
 
 [![CI](https://github.com/conallob/outalator/actions/workflows/ci.yml/badge.svg)](https://github.com/conallob/outalator/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/conallob/outalator)](https://goreportcard.com/report/github.com/conallob/outalator)
 [![codecov](https://codecov.io/gh/conallob/outalator/branch/main/graph/badge.svg)](https://codecov.io/gh/conallob/outalator)
 [![Go](https://img.shields.io/github/go-mod/go-version/conallob/outalator)](https://github.com/conallob/outalator/blob/main/go.mod)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
