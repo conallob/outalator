@@ -18,7 +18,7 @@ The project has been implemented with a complete backend infrastructure:
 
 ## Technology Stack
 
-- **Language**: Go 1.19+ (currently 1.19 for compatibility)
+- **Language**: Go 1.27+
 - **Web Framework**: Gorilla Mux (REST API)
 - **RPC Framework**: gRPC with Protocol Buffers
 - **Database**: PostgreSQL with lib/pq driver
@@ -54,7 +54,7 @@ The SQLite schema is embedded in `storage/sqlite/schema.sql` and applied automat
 
 **Important — Go module maintenance:**
 
-Adding `modernc.org/sqlite` requires Go 1.25.0 (the module's minimum). The `go` directive in `go.mod` reflects this for the entire module; environments on Go 1.23/1.24 will need to upgrade.
+Adding `modernc.org/sqlite` requires a recent Go toolchain; the `go` directive in `go.mod` (currently 1.27.0) applies to the entire module, so environments on older Go releases will need to upgrade.
 
 Because `modernc.org/sqlite` is only imported from files with `//go:build sqlite`, a plain `go mod tidy` (without the build tag) will **remove** it from `go.mod`. Always use the tagged tidy when updating dependencies:
 

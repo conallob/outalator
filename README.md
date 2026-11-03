@@ -39,7 +39,7 @@ The application is built with Go and follows clean architecture principles:
 
 ## Prerequisites
 
-- Go 1.21 or higher
+- Go 1.27 or higher
 - PostgreSQL 12 or higher
 - (Optional) PagerDuty API key
 - (Optional) OpsGenie API key
