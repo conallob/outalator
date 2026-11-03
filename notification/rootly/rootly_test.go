@@ -84,7 +84,7 @@ func TestListTeamsPaginates(t *testing.T) {
 }
 
 func TestAPIError(t *testing.T) {
-	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) { http.Error(w, "no", 401) })
+	svc := newTestService(t, func(w http.ResponseWriter, r *http.Request) { http.Error(w, "no", http.StatusUnauthorized) })
 	if _, err := svc.FetchAlert(context.Background(), "x"); err == nil {
 		t.Fatal("expected error")
 	}

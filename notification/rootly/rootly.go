@@ -122,7 +122,7 @@ func (s *Service) get(ctx context.Context, path string, q url.Values, out any) e
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return fmt.Errorf("Rootly API error: %s (status: %d)", string(body), resp.StatusCode)
+		return fmt.Errorf("rootly API error: %s (status: %d)", string(body), resp.StatusCode)
 	}
 	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
 		return fmt.Errorf("failed to decode response: %w", err)
