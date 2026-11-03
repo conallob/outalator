@@ -1,11 +1,11 @@
 # Import Historical Data
 
-This guide explains how to use the `import-history` tool to bootstrap your Outalator database with historical incident data from PagerDuty or OpsGenie.
+This guide explains how to use the `import-history` tool to bootstrap your Outalator database with historical incident data from PagerDuty, OpsGenie or incident.io.
 
 ## Overview
 
 The import-history tool allows you to:
-- Import historical incidents/alerts from PagerDuty or OpsGenie
+- Import historical incidents/alerts from PagerDuty, OpsGenie or incident.io
 - Specify a date range for the import
 - Filter by specific teams
 - Preview what would be imported with dry-run mode
@@ -15,7 +15,7 @@ The import-history tool allows you to:
 
 1. **Configuration File**: Ensure you have a valid `config.yaml` with your database settings and API keys
 2. **Database**: Your PostgreSQL database must be running and migrations applied
-3. **API Keys**: You need a valid PagerDuty or OpsGenie API key configured
+3. **API Keys**: You need a valid PagerDuty, OpsGenie or incident.io API key configured
 
 ### API Key Configuration
 
@@ -29,12 +29,17 @@ pagerduty:
 # For OpsGenie
 opsgenie:
   api_key: "your-opsgenie-api-key"
+
+# For incident.io
+incidentio:
+  api_key: "your-incidentio-api-key"
 ```
 
 Or set environment variables:
 ```bash
 export PAGERDUTY_API_KEY="your-pagerduty-api-key"
 export OPSGENIE_API_KEY="your-opsgenie-api-key"
+export INCIDENTIO_API_KEY="your-incidentio-api-key"
 ```
 
 ## Building the Tool
@@ -60,6 +65,12 @@ Import all PagerDuty incidents from a specific date:
 Import OpsGenie alerts from a date range:
 ```bash
 ./bin/import-history -service opsgenie -since 2024-01-01T00:00:00Z -until 2024-06-01T00:00:00Z
+```
+
+Import incident.io incidents (team filtering via `-teams` / `-list-teams` is not supported for incident.io):
+
+```bash
+./bin/import-history -service incidentio -since 2024-01-01T00:00:00Z
 ```
 
 ### List Available Teams
@@ -124,7 +135,7 @@ Preview what would be imported without making any changes:
 
 ## How It Works
 
-1. **Fetches Incidents**: The tool queries the PagerDuty or OpsGenie API for incidents/alerts in the specified date range
+1. **Fetches Incidents**: The tool queries the PagerDuty, OpsGenie or incident.io API for incidents/alerts in the specified date range
 2. **Pagination**: Automatically handles pagination to fetch all matching incidents
 3. **Deduplication**: Checks if each incident already exists in the database (by external ID) and skips duplicates
 4. **Creates Records**: For each new incident:
