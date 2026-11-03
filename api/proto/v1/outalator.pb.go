@@ -429,7 +429,6 @@ type Alert struct {
 	// Source-specific metadata
 	//
 	// Types that are assignable to SourceMetadata:
-	//
 	//	*Alert_Pagerduty
 	//	*Alert_Opsgenie
 	//	*Alert_Generic
@@ -2397,7 +2396,6 @@ type ImportAlertRequest struct {
 	// Source-specific metadata (optional)
 	//
 	// Types that are assignable to SourceMetadata:
-	//
 	//	*ImportAlertRequest_Pagerduty
 	//	*ImportAlertRequest_Opsgenie
 	//	*ImportAlertRequest_Generic
