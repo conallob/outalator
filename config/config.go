@@ -16,6 +16,7 @@ type Config struct {
 	Auth      *AuthConfig      `yaml:"auth,omitempty"`
 	PagerDuty *PagerDutyConfig `yaml:"pagerduty,omitempty"`
 	OpsGenie  *OpsGenieConfig  `yaml:"opsgenie,omitempty"`
+	Rootly    *RootlyConfig    `yaml:"rootly,omitempty"`
 	Slack     *SlackConfig     `yaml:"slack,omitempty"`
 }
 
@@ -66,6 +67,12 @@ type PagerDutyConfig struct {
 
 // OpsGenieConfig holds OpsGenie API configuration
 type OpsGenieConfig struct {
+	APIKey string `yaml:"api_key"`
+	APIURL string `yaml:"api_url,omitempty"`
+}
+
+// RootlyConfig holds Rootly API configuration
+type RootlyConfig struct {
 	APIKey string `yaml:"api_key"`
 	APIURL string `yaml:"api_url,omitempty"`
 }
@@ -149,6 +156,13 @@ func Load(path string) (*Config, error) {
 			cfg.OpsGenie = &OpsGenieConfig{}
 		}
 		cfg.OpsGenie.APIKey = ogKey
+	}
+
+	if rKey := os.Getenv("ROOTLY_API_KEY"); rKey != "" {
+		if cfg.Rootly == nil {
+			cfg.Rootly = &RootlyConfig{}
+		}
+		cfg.Rootly.APIKey = rKey
 	}
 
 	// Auth environment variables
