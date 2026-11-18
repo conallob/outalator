@@ -11,6 +11,7 @@ import (
 	"github.com/conall/outalator/config"
 	"github.com/conall/outalator/domain"
 	"github.com/conall/outalator/notification"
+	"github.com/conall/outalator/notification/incidentio"
 	"github.com/conall/outalator/notification/opsgenie"
 	"github.com/conall/outalator/notification/pagerduty"
 	"github.com/conall/outalator/storage/postgres"
@@ -29,7 +30,7 @@ func main() {
 	// Command-line flags
 	var (
 		configPath  = flag.String("config", "config.yaml", "Path to configuration file")
-		service     = flag.String("service", "", "Service to import from (pagerduty or opsgenie)")
+		service     = flag.String("service", "", "Service to import from (pagerduty, opsgenie or incidentio)")
 		since       = flag.String("since", "", "Start date for import (RFC3339 format, e.g., 2024-01-01T00:00:00Z)")
 		until       = flag.String("until", "", "End date for import (RFC3339 format, optional)")
 		teams       = flag.String("teams", "", "Comma-separated list of team IDs to filter (optional)")
@@ -41,11 +42,15 @@ func main() {
 
 	// Validate required flags
 	if *service == "" {
-		log.Fatal("Error: -service flag is required (pagerduty or opsgenie)")
+		log.Fatal("Error: -service flag is required (pagerduty, opsgenie or incidentio)")
 	}
 
-	if *service != "pagerduty" && *service != "opsgenie" {
-		log.Fatal("Error: -service must be either 'pagerduty' or 'opsgenie'")
+	if *service != "pagerduty" && *service != "opsgenie" && *service != "incidentio" {
+		log.Fatal("Error: -service must be one of 'pagerduty', 'opsgenie' or 'incidentio'")
+	}
+
+	if *service == "incidentio" && (*listTeams || *teams != "") {
+		log.Fatal("Error: incident.io does not support team filtering (-teams / -list-teams)")
 	}
 
 	// Load configuration
@@ -72,6 +77,14 @@ func main() {
 		notificationService = opsgenie.New(opsgenie.Config{
 			APIKey: cfg.OpsGenie.APIKey,
 			APIURL: cfg.OpsGenie.APIURL,
+		})
+	case "incidentio":
+		if cfg.IncidentIO == nil || cfg.IncidentIO.APIKey == "" {
+			log.Fatal("Error: incident.io API key not configured")
+		}
+		notificationService = incidentio.New(incidentio.Config{
+			APIKey: cfg.IncidentIO.APIKey,
+			APIURL: cfg.IncidentIO.APIURL,
 		})
 	}
 
@@ -223,6 +236,7 @@ func runImport(
 	serviceName string,
 ) error {
 	offset := 0
+	cursor := "" // used by cursor-paginated services (incident.io)
 	hasMore := true
 
 	for hasMore {
@@ -257,13 +271,32 @@ func runImport(
 				Offset:  offset,
 			}
 			alerts, hasMore, err = ogService.FetchHistoricalAlerts(ctx, opts)
+		case "incidentio":
+			iioService, ok := svc.(*incidentio.Service)
+			if !ok {
+				return fmt.Errorf("expected *incidentio.Service but got unexpected type")
+			}
+			var next string
+			alerts, next, err = iioService.FetchHistoricalIncidents(ctx, incidentio.HistoricalFetchOptions{
+				Since:  since,
+				Until:  until,
+				Limit:  batchSize,
+				Cursor: cursor,
+			})
+			cursor = next
+			hasMore = next != ""
 		}
 
 		if err != nil {
 			return fmt.Errorf("failed to fetch alerts at offset %d: %w", offset, err)
 		}
 
+		// A cursor-paginated page can be empty after client-side date
+		// filtering while later pages still have results.
 		if len(alerts) == 0 {
+			if hasMore && serviceName == "incidentio" {
+				continue
+			}
 			break
 		}
 
