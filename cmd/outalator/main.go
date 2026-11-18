@@ -15,6 +15,7 @@ import (
 	"github.com/conall/outalator/config"
 	grpcserver "github.com/conall/outalator/internal/grpc"
 	"github.com/conall/outalator/notification/opsgenie"
+	"github.com/conall/outalator/notification/rootly"
 	"github.com/conall/outalator/notification/pagerduty"
 	"github.com/conall/outalator/service"
 	"github.com/conall/outalator/internal/slack"
@@ -92,6 +93,14 @@ func main() {
 		ogSvc := opsgenie.New(ogConfig)
 		svc.RegisterNotificationService(ogSvc)
 		log.Println("Registered OpsGenie notification service")
+	}
+
+	if cfg.Rootly != nil && cfg.Rootly.APIKey != "" {
+		svc.RegisterNotificationService(rootly.New(rootly.Config{
+			APIKey: cfg.Rootly.APIKey,
+			APIURL: cfg.Rootly.APIURL,
+		}))
+		log.Println("Registered Rootly notification service")
 	}
 
 	// Set up HTTP router

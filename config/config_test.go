@@ -277,3 +277,22 @@ func TestGRPCEnvOverride(t *testing.T) {
 		t.Errorf("GRPC.Port = %d, want 9191", cfg.GRPC.Port)
 	}
 }
+
+func TestLoadRootly(t *testing.T) {
+	path := writeConfig(t, "rootly:\n  api_key: r-key\n")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Rootly == nil || cfg.Rootly.APIKey != "r-key" {
+		t.Errorf("Rootly = %+v", cfg.Rootly)
+	}
+	t.Setenv("ROOTLY_API_KEY", "env-r")
+	cfg, err = Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Rootly.APIKey != "env-r" {
+		t.Errorf("APIKey = %q", cfg.Rootly.APIKey)
+	}
+}

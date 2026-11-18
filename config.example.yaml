@@ -42,6 +42,11 @@ database:
 #   api_key: your-opsgenie-api-key
 #   api_url: https://api.opsgenie.com  # optional, uses default if not specified
 
+# Optional: Configure Rootly integration
+# rootly:
+#   api_key: your-rootly-api-key
+#   api_url: https://api.rootly.com  # optional, uses default if not specified
+
 # Optional: Configure Slack bot integration
 # slack:
 #   enabled: false

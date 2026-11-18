@@ -14,6 +14,7 @@ A modern web application for tracking outage troubleshooting notes for Site Reli
 - **Multi-Service Alerts**: Import alerts from multiple oncall notification services
   - PagerDuty
   - OpsGenie
+  - Rootly
   - Extensible architecture for additional services
 - **Note-Taking**: Add plaintext or markdown notes to outages
 - **Tagging System**: Organize outages with flexible key-value tags (e.g., Jira tickets, services, regions)
@@ -42,6 +43,7 @@ The application is built with Go and follows clean architecture principles:
 - PostgreSQL 12 or higher
 - (Optional) PagerDuty API key
 - (Optional) OpsGenie API key
+- (Optional) Rootly API key
 - (Optional) Slack workspace with bot permissions
 - (Optional) Claude Desktop for MCP integration
 
@@ -87,7 +89,7 @@ go run cmd/outalator/main.go -config config.yaml
 
 ## Importing Historical Data
 
-Outalator includes a tool to bootstrap your database with historical incidents from PagerDuty or OpsGenie.
+Outalator includes a tool to bootstrap your database with historical incidents from PagerDuty, OpsGenie or Rootly.
 
 ### Quick Start
 
@@ -136,6 +138,10 @@ pagerduty:
 # Optional: OpsGenie integration
 opsgenie:
   api_key: your-opsgenie-api-key
+
+# Optional: Rootly integration
+rootly:
+  api_key: your-rootly-api-key
 ```
 
 ### Environment Variables
@@ -151,6 +157,7 @@ Environment variables override config file values:
 - `DB_NAME` - Database name
 - `PAGERDUTY_API_KEY` - PagerDuty API key
 - `OPSGENIE_API_KEY` - OpsGenie API key
+- `ROOTLY_API_KEY` - Rootly API key
 
 ## API Documentation
 

@@ -12,6 +12,7 @@ import (
 	"github.com/conall/outalator/config"
 	"github.com/conall/outalator/internal/mcp"
 	"github.com/conall/outalator/notification/opsgenie"
+	"github.com/conall/outalator/notification/rootly"
 	"github.com/conall/outalator/notification/pagerduty"
 	"github.com/conall/outalator/service"
 	"github.com/conall/outalator/storage"
@@ -56,6 +57,14 @@ func main() {
 		ogSvc := opsgenie.New(ogConfig)
 		svc.RegisterNotificationService(ogSvc)
 		log.Println("Registered OpsGenie notification service")
+	}
+
+	if cfg.Rootly != nil && cfg.Rootly.APIKey != "" {
+		svc.RegisterNotificationService(rootly.New(rootly.Config{
+			APIKey: cfg.Rootly.APIKey,
+			APIURL: cfg.Rootly.APIURL,
+		}))
+		log.Println("Registered Rootly notification service")
 	}
 
 	// Create MCP server
