@@ -32,7 +32,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         # continue-on-error handles fork PRs (no secrets) and Codecov downtime.
-        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3  # v5.3.1
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5  # v7.1.1
         with:
           files: coverage.out
           flags: unit
@@ -61,7 +61,7 @@ jobs:
 
       - name: Upload SQLite coverage to Codecov
         # continue-on-error handles fork PRs (no secrets) and Codecov downtime.
-        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3  # v5.3.1
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5  # v7.1.1
         with:
           files: coverage-sqlite.out
           flags: sqlite
