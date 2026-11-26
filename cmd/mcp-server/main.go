@@ -11,6 +11,7 @@ import (
 
 	"github.com/conall/outalator/config"
 	"github.com/conall/outalator/internal/mcp"
+	"github.com/conall/outalator/notification/incidentio"
 	"github.com/conall/outalator/notification/opsgenie"
 	"github.com/conall/outalator/notification/pagerduty"
 	"github.com/conall/outalator/service"
@@ -56,6 +57,14 @@ func main() {
 		ogSvc := opsgenie.New(ogConfig)
 		svc.RegisterNotificationService(ogSvc)
 		log.Println("Registered OpsGenie notification service")
+	}
+
+	if cfg.IncidentIO != nil && cfg.IncidentIO.APIKey != "" {
+		svc.RegisterNotificationService(incidentio.New(incidentio.Config{
+			APIKey: cfg.IncidentIO.APIKey,
+			APIURL: cfg.IncidentIO.APIURL,
+		}))
+		log.Println("Registered incident.io notification service")
 	}
 
 	// Create MCP server

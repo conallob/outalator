@@ -277,3 +277,28 @@ func TestGRPCEnvOverride(t *testing.T) {
 		t.Errorf("GRPC.Port = %d, want 9191", cfg.GRPC.Port)
 	}
 }
+
+func TestLoadIncidentIO(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	yml := "incidentio:\n  api_key: iio-key\n  api_url: https://example.test\n"
+	if err := os.WriteFile(path, []byte(yml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.IncidentIO == nil || cfg.IncidentIO.APIKey != "iio-key" || cfg.IncidentIO.APIURL != "https://example.test" {
+		t.Errorf("IncidentIO = %+v", cfg.IncidentIO)
+	}
+
+	t.Setenv("INCIDENTIO_API_KEY", "env-key")
+	cfg, err = Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.IncidentIO.APIKey != "env-key" {
+		t.Errorf("APIKey = %q, want env-key", cfg.IncidentIO.APIKey)
+	}
+}
