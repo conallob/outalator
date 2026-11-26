@@ -12,6 +12,7 @@ import (
 	"github.com/conall/outalator/domain"
 	"github.com/conall/outalator/notification"
 	"github.com/conall/outalator/notification/opsgenie"
+	"github.com/conall/outalator/notification/rootly"
 	"github.com/conall/outalator/notification/pagerduty"
 	"github.com/conall/outalator/storage/postgres"
 	"github.com/google/uuid"
@@ -29,7 +30,7 @@ func main() {
 	// Command-line flags
 	var (
 		configPath  = flag.String("config", "config.yaml", "Path to configuration file")
-		service     = flag.String("service", "", "Service to import from (pagerduty or opsgenie)")
+		service     = flag.String("service", "", "Service to import from (pagerduty, opsgenie or rootly)")
 		since       = flag.String("since", "", "Start date for import (RFC3339 format, e.g., 2024-01-01T00:00:00Z)")
 		until       = flag.String("until", "", "End date for import (RFC3339 format, optional)")
 		teams       = flag.String("teams", "", "Comma-separated list of team IDs to filter (optional)")
@@ -41,11 +42,11 @@ func main() {
 
 	// Validate required flags
 	if *service == "" {
-		log.Fatal("Error: -service flag is required (pagerduty or opsgenie)")
+		log.Fatal("Error: -service flag is required (pagerduty, opsgenie or rootly)")
 	}
 
-	if *service != "pagerduty" && *service != "opsgenie" {
-		log.Fatal("Error: -service must be either 'pagerduty' or 'opsgenie'")
+	if *service != "pagerduty" && *service != "opsgenie" && *service != "rootly" {
+		log.Fatal("Error: -service must be one of 'pagerduty', 'opsgenie' or 'rootly'")
 	}
 
 	// Load configuration
@@ -72,6 +73,14 @@ func main() {
 		notificationService = opsgenie.New(opsgenie.Config{
 			APIKey: cfg.OpsGenie.APIKey,
 			APIURL: cfg.OpsGenie.APIURL,
+		})
+	case "rootly":
+		if cfg.Rootly == nil || cfg.Rootly.APIKey == "" {
+			log.Fatal("Error: Rootly API key not configured")
+		}
+		notificationService = rootly.New(rootly.Config{
+			APIKey: cfg.Rootly.APIKey,
+			APIURL: cfg.Rootly.APIURL,
 		})
 	}
 
@@ -191,6 +200,20 @@ func listAvailableTeams(ctx context.Context, svc interface{}, serviceName string
 		for i := range ogTeams {
 			teams[i] = &teamAdapter{id: ogTeams[i].ID, name: ogTeams[i].Name}
 		}
+	case "rootly":
+		rService, ok := svc.(*rootly.Service)
+		if !ok {
+			log.Fatalf("Expected *rootly.Service but got unexpected type")
+		}
+		rTeams, err := rService.ListTeams(ctx)
+		if err != nil {
+			log.Fatalf("Failed to list teams: %v", err)
+		}
+		// Rootly filters incidents by team slug, so show the slug as the ID.
+		teams = make([]interface{ GetID() string; GetName() string }, len(rTeams))
+		for i := range rTeams {
+			teams[i] = &teamAdapter{id: rTeams[i].Slug, name: rTeams[i].Name}
+		}
 	}
 
 	if err != nil {
@@ -257,6 +280,18 @@ func runImport(
 				Offset:  offset,
 			}
 			alerts, hasMore, err = ogService.FetchHistoricalAlerts(ctx, opts)
+		case "rootly":
+			rService, ok := svc.(*rootly.Service)
+			if !ok {
+				return fmt.Errorf("expected *rootly.Service but got unexpected type")
+			}
+			alerts, hasMore, err = rService.FetchHistoricalIncidents(ctx, rootly.HistoricalFetchOptions{
+				Since:   since,
+				Until:   until,
+				TeamIDs: teamIDs,
+				Limit:   batchSize,
+				Offset:  offset,
+			})
 		}
 
 		if err != nil {
